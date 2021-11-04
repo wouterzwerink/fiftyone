@@ -54,6 +54,7 @@ def import_samples(
     tags=None,
     expand_schema=True,
     add_info=True,
+    **kwargs,
 ):
     """Adds the samples from the given :class:`DatasetImporter` to the dataset.
 
@@ -121,14 +122,11 @@ def import_samples(
             dataset, dataset_importer, label_field, tags, expand_schema
         )
 
-        try:
-            num_samples = len(dataset_importer)
-        except:
-            num_samples = None
-
-        samples = map(parse_sample, iter(dataset_importer))
         sample_ids = dataset.add_samples(
-            samples, expand_schema=expand_schema, num_samples=num_samples
+            dataset_importer,
+            parse_fcn=parse_sample,
+            expand_schema=expand_schema,
+            **kwargs,
         )
 
         if add_info and dataset_importer.has_dataset_info:
@@ -157,6 +155,7 @@ def merge_samples(
     overwrite=True,
     expand_schema=True,
     add_info=True,
+    **kwargs,
 ):
     """Merges the samples from the given :class:`DatasetImporter` into the
     dataset.
@@ -277,6 +276,7 @@ def merge_samples(
             expand_schema=expand_schema,
             include_info=add_info,
             overwrite_info=True,
+            **kwargs,
         )
 
         tmp.delete()
@@ -292,15 +292,8 @@ def merge_samples(
             dataset, dataset_importer, label_field, tags, expand_schema
         )
 
-        try:
-            num_samples = len(dataset_importer)
-        except:
-            num_samples = None
-
-        samples = map(parse_sample, iter(dataset_importer))
-
         dataset.merge_samples(
-            samples,
+            dataset_importer,
             key_field=key_field,
             key_fcn=key_fcn,
             skip_existing=skip_existing,
@@ -309,8 +302,9 @@ def merge_samples(
             omit_fields=omit_fields,
             merge_lists=merge_lists,
             overwrite=overwrite,
+            parse_fcn=parse_sample,
             expand_schema=expand_schema,
-            num_samples=num_samples,
+            **kwargs,
         )
 
         if add_info and dataset_importer.has_dataset_info:

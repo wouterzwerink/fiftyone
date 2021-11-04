@@ -25,7 +25,7 @@ import fiftyone.utils.eta as foue
 fouv = fou.lazy_import("fiftyone.utils.video")
 
 
-def add_images(dataset, samples, sample_parser, tags=None):
+def add_images(dataset, samples, sample_parser, tags=None, **kwargs):
     """Adds the given images to the dataset.
 
     This operation does not read the images.
@@ -77,14 +77,8 @@ def add_images(dataset, samples, sample_parser, tags=None):
 
         return fos.Sample(filepath=image_path, metadata=metadata, tags=tags)
 
-    try:
-        num_samples = len(samples)
-    except:
-        num_samples = None
-
-    _samples = map(parse_sample, samples)
     return dataset.add_samples(
-        _samples, num_samples=num_samples, expand_schema=False
+        samples, parse_fcn=parse_sample, expand_schema=False, **kwargs
     )
 
 
@@ -95,6 +89,7 @@ def add_labeled_images(
     label_field=None,
     tags=None,
     expand_schema=True,
+    **kwargs,
 ):
     """Adds the given labeled images to the dataset.
 
@@ -180,18 +175,12 @@ def add_labeled_images(
         dataset._ensure_label_field(label_field, sample_parser.label_cls)
         expand_schema = False
 
-    try:
-        num_samples = len(samples)
-    except:
-        num_samples = None
-
-    _samples = map(parse_sample, samples)
     return dataset.add_samples(
-        _samples, expand_schema=expand_schema, num_samples=num_samples
+        samples, parse_fcn=parse_sample, expand_schema=expand_schema, **kwargs
     )
 
 
-def add_videos(dataset, samples, sample_parser, tags=None):
+def add_videos(dataset, samples, sample_parser, tags=None, **kwargs):
     """Adds the given videos to the dataset.
 
     This operation does not read the videos.
@@ -237,16 +226,8 @@ def add_videos(dataset, samples, sample_parser, tags=None):
 
         return fos.Sample(filepath=video_path, metadata=metadata, tags=tags)
 
-    try:
-        num_samples = len(samples)
-    except:
-        num_samples = None
-
-    _samples = map(parse_sample, samples)
-
-    # @todo: skip schema expansion and set media type before adding samples
     return dataset.add_samples(
-        _samples, num_samples=num_samples, expand_schema=True
+        samples, parse_fcn=parse_sample, expand_schema=False, **kwargs
     )
 
 
@@ -257,6 +238,7 @@ def add_labeled_videos(
     label_field=None,
     tags=None,
     expand_schema=True,
+    **kwargs,
 ):
     """Adds the given labeled videos to the dataset.
 
@@ -325,14 +307,8 @@ def add_labeled_videos(
 
         return sample
 
-    try:
-        num_samples = len(samples)
-    except:
-        num_samples = None
-
-    _samples = map(parse_sample, samples)
     return dataset.add_samples(
-        _samples, expand_schema=expand_schema, num_samples=num_samples
+        samples, parse_fcn=parse_sample, expand_schema=expand_schema, **kwargs
     )
 
 

@@ -44,6 +44,7 @@ import fiftyone.core.utils as fou
 import fiftyone.core.view as fov
 
 fost = fou.lazy_import("fiftyone.core.stages")
+foub = fou.lazy_import("fiftyone.utils.beam")
 foud = fou.lazy_import("fiftyone.utils.data")
 
 
@@ -1328,7 +1329,13 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         return self._add_samples_batch([sample], expand_schema, validate)[0]
 
     def add_samples(
-        self, samples, expand_schema=True, validate=True, num_samples=None
+        self,
+        samples,
+        parse_fcn=None,
+        expand_schema=True,
+        validate=True,
+        num_samples=None,
+        **kwargs,
     ):
         """Adds the given samples to the dataset.
 
@@ -1337,9 +1344,15 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         that belong to other datasets are not modified.
 
         Args:
-            samples: an iterable of :class:`fiftyone.core.sample.Sample`
-                instances or a
-                :class:`fiftyone.core.collections.SampleCollection`
+            samples: can be any of the following:
+
+                -   a :class:`fiftyone.core.collections.SampleCollection`
+                -   an iterable of :class:`fiftyone.core.sample.Sample`
+                    instances
+                -   an iterable whose elements to pass to ``parse_fcn``
+            parse_fcn (None): an optional function to apply to the elements of
+                ``samples`` that yields :class:`fiftyone.core.sample.Sample`
+                instances
             expand_schema (True): whether to dynamically add new sample fields
                 encountered to the dataset schema. If False, an error is raised
                 if a sample's schema is not a subset of the dataset schema
@@ -1357,6 +1370,19 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
                 num_samples = len(samples)
             except:
                 pass
+
+        if kwargs:
+            return foub.beam_import(
+                self,
+                samples,
+                parse_fcn=parse_fcn,
+                expand_schema=expand_schema,
+                validate=validate,
+                **kwargs,
+            )
+
+        if parse_fcn is not None:
+            samples = map(parse_fcn, samples)
 
         # Dynamically size batches so that they are as large as possible while
         # still achieving a nice frame rate on the progress bar
@@ -1553,10 +1579,12 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         omit_fields=None,
         merge_lists=True,
         overwrite=True,
+        parse_fcn=None,
         expand_schema=True,
         include_info=True,
         overwrite_info=False,
         num_samples=None,
+        **kwargs,
     ):
         """Merges the given samples into this dataset.
 
@@ -1590,8 +1618,12 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         -   Mapping input fields to different field names of this dataset
 
         Args:
-            samples: a :class:`fiftyone.core.collections.SampleCollection` or
-                iterable of :class:`fiftyone.core.sample.Sample` instances
+            samples: can be any of the following:
+
+                -   a :class:`fiftyone.core.collections.SampleCollection`
+                -   an iterable of :class:`fiftyone.core.sample.Sample`
+                    instances
+                -   an iterable whose elements to pass to ``parse_fcn``
             key_field ("filepath"): the sample field to use to decide whether
                 to join with an existing sample
             key_fcn (None): a function that accepts a
@@ -1625,6 +1657,9 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
                 samples
             overwrite (True): whether to overwrite (True) or skip (False)
                 existing fields and label elements
+            parse_fcn (None): an optional function to apply to the elements of
+                ``samples`` that yields :class:`fiftyone.core.sample.Sample`
+                instances
             expand_schema (True): whether to dynamically add new fields
                 encountered to the dataset schema. If False, an error is raised
                 if a sample's schema is not a subset of the dataset schema
@@ -1689,7 +1724,9 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
 
         if key_fcn is None:
             tmp = Dataset()
-            tmp.add_samples(samples, num_samples=num_samples)
+            tmp.add_samples(
+                samples, parse_fcn=parse_fcn, num_samples=num_samples, **kwargs
+            )
 
             self.merge_samples(
                 tmp,
@@ -1707,7 +1744,12 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
 
             return
 
-        _merge_samples_python(
+        if kwargs:
+            do_merge = foub.beam_merge
+        else:
+            do_merge = _merge_samples_python
+
+        do_merge(
             self,
             samples,
             key_field=key_field,
@@ -1718,8 +1760,10 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             omit_fields=omit_fields,
             merge_lists=merge_lists,
             overwrite=overwrite,
+            parse_fcn=parse_fcn,
             expand_schema=expand_schema,
             num_samples=num_samples,
+            **kwargs,
         )
 
     def delete_samples(self, samples_or_ids):
@@ -2319,11 +2363,12 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         Returns:
             a list of IDs of the samples that were added to the dataset
         """
-        dataset_importer, _ = foud.build_dataset_importer(
+        dataset_importer, kwargs = foud.build_dataset_importer(
             dataset_type,
             dataset_dir=dataset_dir,
             data_path=data_path,
             labels_path=labels_path,
+            warn_unused=False,
             name=self.name,
             **kwargs,
         )
@@ -2334,6 +2379,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             tags=tags,
             expand_schema=expand_schema,
             add_info=add_info,
+            **kwargs,
         )
 
     def merge_dir(
@@ -2505,11 +2551,12 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
                 the :class:`fiftyone.utils.data.importers.DatasetImporter` for
                 the specified ``dataset_type``
         """
-        dataset_importer, _ = foud.build_dataset_importer(
+        dataset_importer, kwargs = foud.build_dataset_importer(
             dataset_type,
             dataset_dir=dataset_dir,
             data_path=data_path,
             labels_path=labels_path,
+            warn_unused=False,
             name=self.name,
             **kwargs,
         )
@@ -2528,6 +2575,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             overwrite=overwrite,
             expand_schema=expand_schema,
             add_info=add_info,
+            **kwargs,
         )
 
     def add_archive(
@@ -2837,6 +2885,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         tags=None,
         expand_schema=True,
         add_info=True,
+        **kwargs,
     ):
         """Adds the samples from the given
         :class:`fiftyone.utils.data.importers.DatasetImporter` to the dataset.
@@ -2879,6 +2928,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             tags=tags,
             expand_schema=expand_schema,
             add_info=add_info,
+            **kwargs,
         )
 
     def merge_importer(
@@ -2896,6 +2946,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         overwrite=True,
         expand_schema=True,
         add_info=True,
+        **kwargs,
     ):
         """Merges the samples from the given
         :class:`fiftyone.utils.data.importers.DatasetImporter` into the
@@ -3005,9 +3056,12 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             overwrite=overwrite,
             expand_schema=expand_schema,
             add_info=add_info,
+            **kwargs,
         )
 
-    def add_images(self, paths_or_samples, sample_parser=None, tags=None):
+    def add_images(
+        self, paths_or_samples, sample_parser=None, tags=None, **kwargs
+    ):
         """Adds the given images to the dataset.
 
         This operation does not read the images.
@@ -3034,7 +3088,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             sample_parser = foud.ImageSampleParser()
 
         return foud.add_images(
-            self, paths_or_samples, sample_parser, tags=tags
+            self, paths_or_samples, sample_parser, tags=tags, **kwargs
         )
 
     def add_labeled_images(
@@ -3044,6 +3098,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         label_field=None,
         tags=None,
         expand_schema=True,
+        **kwargs,
     ):
         """Adds the given labeled images to the dataset.
 
@@ -3086,9 +3141,10 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             label_field=label_field,
             tags=tags,
             expand_schema=expand_schema,
+            **kwargs,
         )
 
-    def add_images_dir(self, images_dir, tags=None, recursive=True):
+    def add_images_dir(self, images_dir, tags=None, recursive=True, **kwargs):
         """Adds the given directory of images to the dataset.
 
         See :class:`fiftyone.types.dataset_types.ImageDirectory` for format
@@ -3108,9 +3164,9 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         image_paths = foud.parse_images_dir(images_dir, recursive=recursive)
         sample_parser = foud.ImageSampleParser()
-        return self.add_images(image_paths, sample_parser, tags=tags)
+        return self.add_images(image_paths, sample_parser, tags=tags, **kwargs)
 
-    def add_images_patt(self, images_patt, tags=None):
+    def add_images_patt(self, images_patt, tags=None, **kwargs):
         """Adds the given glob pattern of images to the dataset.
 
         This operation does not read the images.
@@ -3126,7 +3182,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         image_paths = etau.get_glob_matches(images_patt)
         sample_parser = foud.ImageSampleParser()
-        return self.add_images(image_paths, sample_parser, tags=tags)
+        return self.add_images(image_paths, sample_parser, tags=tags, **kwargs)
 
     def ingest_images(
         self,
@@ -3135,6 +3191,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         tags=None,
         dataset_dir=None,
         image_format=None,
+        **kwargs,
     ):
         """Ingests the given iterable of images into the dataset.
 
@@ -3175,7 +3232,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             image_format=image_format,
         )
 
-        return self.add_importer(dataset_ingestor, tags=tags)
+        return self.add_importer(dataset_ingestor, tags=tags, **kwargs)
 
     def ingest_labeled_images(
         self,
@@ -3186,6 +3243,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         expand_schema=True,
         dataset_dir=None,
         image_format=None,
+        **kwargs,
     ):
         """Ingests the given iterable of labeled image samples into the
         dataset.
@@ -3236,9 +3294,12 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             label_field=label_field,
             tags=tags,
             expand_schema=expand_schema,
+            **kwargs,
         )
 
-    def add_videos(self, paths_or_samples, sample_parser=None, tags=None):
+    def add_videos(
+        self, paths_or_samples, sample_parser=None, tags=None, **kwargs
+    ):
         """Adds the given videos to the dataset.
 
         This operation does not read the videos.
@@ -3265,7 +3326,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             sample_parser = foud.VideoSampleParser()
 
         return foud.add_videos(
-            self, paths_or_samples, sample_parser, tags=tags
+            self, paths_or_samples, sample_parser, tags=tags, **kwargs
         )
 
     def add_labeled_videos(
@@ -3275,6 +3336,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         label_field=None,
         tags=None,
         expand_schema=True,
+        **kwargs,
     ):
         """Adds the given labeled videos to the dataset.
 
@@ -3318,9 +3380,10 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             label_field=label_field,
             tags=tags,
             expand_schema=expand_schema,
+            **kwargs,
         )
 
-    def add_videos_dir(self, videos_dir, tags=None, recursive=True):
+    def add_videos_dir(self, videos_dir, tags=None, recursive=True, **kwargs):
         """Adds the given directory of videos to the dataset.
 
         See :class:`fiftyone.types.dataset_types.VideoDirectory` for format
@@ -3340,9 +3403,9 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         video_paths = foud.parse_videos_dir(videos_dir, recursive=recursive)
         sample_parser = foud.VideoSampleParser()
-        return self.add_videos(video_paths, sample_parser, tags=tags)
+        return self.add_videos(video_paths, sample_parser, tags=tags, **kwargs)
 
-    def add_videos_patt(self, videos_patt, tags=None):
+    def add_videos_patt(self, videos_patt, tags=None, **kwargs):
         """Adds the given glob pattern of videos to the dataset.
 
         This operation does not read/decode the videos.
@@ -3358,10 +3421,15 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         video_paths = etau.get_glob_matches(videos_patt)
         sample_parser = foud.VideoSampleParser()
-        return self.add_videos(video_paths, sample_parser, tags=tags)
+        return self.add_videos(video_paths, sample_parser, tags=tags, **kwargs)
 
     def ingest_videos(
-        self, paths_or_samples, sample_parser=None, tags=None, dataset_dir=None
+        self,
+        paths_or_samples,
+        sample_parser=None,
+        tags=None,
+        dataset_dir=None,
+        **kwargs,
     ):
         """Ingests the given iterable of videos into the dataset.
 
@@ -3397,7 +3465,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             dataset_dir, paths_or_samples, sample_parser
         )
 
-        return self.add_importer(dataset_ingestor, tags=tags)
+        return self.add_importer(dataset_ingestor, tags=tags, **kwargs)
 
     def ingest_labeled_videos(
         self,
@@ -3406,6 +3474,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         tags=None,
         expand_schema=True,
         dataset_dir=None,
+        **kwargs,
     ):
         """Ingests the given iterable of labeled video samples into the
         dataset.
@@ -3440,7 +3509,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         )
 
         return self.add_importer(
-            dataset_ingestor, tags=tags, expand_schema=expand_schema
+            dataset_ingestor, tags=tags, expand_schema=expand_schema, **kwargs
         )
 
     @classmethod
@@ -3666,7 +3735,7 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
 
     @classmethod
     def from_importer(
-        cls, dataset_importer, name=None, label_field=None, tags=None
+        cls, dataset_importer, name=None, label_field=None, tags=None, **kwargs
     ):
         """Creates a :class:`Dataset` by importing the samples in the given
         :class:`fiftyone.utils.data.importers.DatasetImporter`.
@@ -3702,13 +3771,18 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         dataset = cls(name)
         dataset.add_importer(
-            dataset_importer, label_field=label_field, tags=tags
+            dataset_importer, label_field=label_field, tags=tags, **kwargs
         )
         return dataset
 
     @classmethod
     def from_images(
-        cls, paths_or_samples, sample_parser=None, name=None, tags=None
+        cls,
+        paths_or_samples,
+        sample_parser=None,
+        name=None,
+        tags=None,
+        **kwargs,
     ):
         """Creates a :class:`Dataset` from the given images.
 
@@ -3737,13 +3811,19 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         dataset = cls(name)
         dataset.add_images(
-            paths_or_samples, sample_parser=sample_parser, tags=tags
+            paths_or_samples, sample_parser=sample_parser, tags=tags, **kwargs
         )
         return dataset
 
     @classmethod
     def from_labeled_images(
-        cls, samples, sample_parser, name=None, label_field=None, tags=None,
+        cls,
+        samples,
+        sample_parser,
+        name=None,
+        label_field=None,
+        tags=None,
+        **kwargs,
     ):
         """Creates a :class:`Dataset` from the given labeled images.
 
@@ -3780,12 +3860,18 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         dataset = cls(name)
         dataset.add_labeled_images(
-            samples, sample_parser, label_field=label_field, tags=tags,
+            samples,
+            sample_parser,
+            label_field=label_field,
+            tags=tags,
+            **kwargs,
         )
         return dataset
 
     @classmethod
-    def from_images_dir(cls, images_dir, name=None, tags=None, recursive=True):
+    def from_images_dir(
+        cls, images_dir, name=None, tags=None, recursive=True, **kwargs
+    ):
         """Creates a :class:`Dataset` from the given directory of images.
 
         This operation does not read the images.
@@ -3802,11 +3888,13 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             a :class:`Dataset`
         """
         dataset = cls(name)
-        dataset.add_images_dir(images_dir, tags=tags, recursive=recursive)
+        dataset.add_images_dir(
+            images_dir, tags=tags, recursive=recursive, **kwargs
+        )
         return dataset
 
     @classmethod
-    def from_images_patt(cls, images_patt, name=None, tags=None):
+    def from_images_patt(cls, images_patt, name=None, tags=None, **kwargs):
         """Creates a :class:`Dataset` from the given glob pattern of images.
 
         This operation does not read the images.
@@ -3823,12 +3911,17 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             a :class:`Dataset`
         """
         dataset = cls(name)
-        dataset.add_images_patt(images_patt, tags=tags)
+        dataset.add_images_patt(images_patt, tags=tags, **kwargs)
         return dataset
 
     @classmethod
     def from_videos(
-        cls, paths_or_samples, sample_parser=None, name=None, tags=None
+        cls,
+        paths_or_samples,
+        sample_parser=None,
+        name=None,
+        tags=None,
+        **kwargs,
     ):
         """Creates a :class:`Dataset` from the given videos.
 
@@ -3857,13 +3950,19 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         dataset = cls(name)
         dataset.add_videos(
-            paths_or_samples, sample_parser=sample_parser, tags=tags
+            paths_or_samples, sample_parser=sample_parser, tags=tags, **kwargs
         )
         return dataset
 
     @classmethod
     def from_labeled_videos(
-        cls, samples, sample_parser, name=None, label_field=None, tags=None
+        cls,
+        samples,
+        sample_parser,
+        name=None,
+        label_field=None,
+        tags=None,
+        **kwargs,
     ):
         """Creates a :class:`Dataset` from the given labeled videos.
 
@@ -3900,12 +3999,18 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         dataset = cls(name)
         dataset.add_labeled_videos(
-            samples, sample_parser, label_field=label_field, tags=tags
+            samples,
+            sample_parser,
+            label_field=label_field,
+            tags=tags,
+            **kwargs,
         )
         return dataset
 
     @classmethod
-    def from_videos_dir(cls, videos_dir, name=None, tags=None, recursive=True):
+    def from_videos_dir(
+        cls, videos_dir, name=None, tags=None, recursive=True, **kwargs
+    ):
         """Creates a :class:`Dataset` from the given directory of videos.
 
         This operation does not read/decode the videos.
@@ -3922,11 +4027,13 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             a :class:`Dataset`
         """
         dataset = cls(name)
-        dataset.add_videos_dir(videos_dir, tags=tags, recursive=recursive)
+        dataset.add_videos_dir(
+            videos_dir, tags=tags, recursive=recursive, **kwargs
+        )
         return dataset
 
     @classmethod
-    def from_videos_patt(cls, videos_patt, name=None, tags=None):
+    def from_videos_patt(cls, videos_patt, name=None, tags=None, **kwargs):
         """Creates a :class:`Dataset` from the given glob pattern of videos.
 
         This operation does not read/decode the videos.
@@ -3943,11 +4050,13 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             a :class:`Dataset`
         """
         dataset = cls(name)
-        dataset.add_videos_patt(videos_patt, tags=tags)
+        dataset.add_videos_patt(videos_patt, tags=tags, **kwargs)
         return dataset
 
     @classmethod
-    def from_dict(cls, d, name=None, rel_dir=None, frame_labels_dir=None):
+    def from_dict(
+        cls, d, name=None, rel_dir=None, frame_labels_dir=None, **kwargs
+    ):
         """Loads a :class:`Dataset` from a JSON dictionary generated by
         :func:`fiftyone.core.collections.SampleCollection.to_dict`.
 
@@ -4021,18 +4130,20 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
 
             return sample
 
-        samples = d["samples"]
-        num_samples = len(samples)
-        _samples = map(parse_sample, samples)
         dataset.add_samples(
-            _samples, expand_schema=False, num_samples=num_samples
+            d["samples"], parse_fcn=parse_sample, expand_schema=False, **kwargs
         )
 
         return dataset
 
     @classmethod
     def from_json(
-        cls, path_or_str, name=None, rel_dir=None, frame_labels_dir=None
+        cls,
+        path_or_str,
+        name=None,
+        rel_dir=None,
+        frame_labels_dir=None,
+        **kwargs,
     ):
         """Loads a :class:`Dataset` from JSON generated by
         :func:`fiftyone.core.collections.SampleCollection.write_json` or
@@ -4057,7 +4168,11 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         d = etas.load_json(path_or_str)
         return cls.from_dict(
-            d, name=name, rel_dir=rel_dir, frame_labels_dir=frame_labels_dir
+            d,
+            name=name,
+            rel_dir=rel_dir,
+            frame_labels_dir=frame_labels_dir,
+            **kwargs,
         )
 
     def _add_view_stage(self, stage):
@@ -5131,6 +5246,7 @@ def _merge_samples_python(
     omit_fields=None,
     merge_lists=True,
     overwrite=True,
+    parse_fcn=None,
     expand_schema=True,
     num_samples=None,
 ):
@@ -5139,6 +5255,9 @@ def _merge_samples_python(
             num_samples = len(samples)
         except:
             pass
+
+    if parse_fcn is not None:
+        samples = map(parse_fcn, samples)
 
     if key_fcn is None:
         id_map = {k: v for k, v in zip(*dataset.values([key_field, "id"]))}

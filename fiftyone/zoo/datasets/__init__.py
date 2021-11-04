@@ -221,11 +221,14 @@ def load_zoo_dataset(
     #
     kwargs["include_all_data"] = True
 
-    importer_kwargs, unused_kwargs = fou.extract_kwargs_for_class(
+    importer_kwargs, kwargs = fou.extract_kwargs_for_class(
         dataset_importer_cls, kwargs
     )
 
-    for key, value in unused_kwargs.items():
+    kwargs.pop("include_all_data", None)
+
+    """
+    for key, value in kwargs.items():
         if (
             key in download_kwargs
             or key == "include_all_data"
@@ -238,6 +241,7 @@ def load_zoo_dataset(
             key,
             dataset_importer_cls,
         )
+    """
 
     if dataset_name is None:
         dataset_name = zoo_dataset.name
@@ -280,14 +284,19 @@ def load_zoo_dataset(
                 dataset_type, dataset_dir=split_dir, **importer_kwargs
             )
             dataset.add_importer(
-                dataset_importer, label_field=label_field, tags=[split]
+                dataset_importer,
+                label_field=label_field,
+                tags=[split],
+                **kwargs,
             )
     else:
         logger.info("Loading '%s'", zoo_dataset.name)
         dataset_importer, _ = foud.build_dataset_importer(
             dataset_type, dataset_dir=dataset_dir, **importer_kwargs
         )
-        dataset.add_importer(dataset_importer, label_field=label_field)
+        dataset.add_importer(
+            dataset_importer, label_field=label_field, **kwargs
+        )
 
     if info.classes is not None:
         dataset.default_classes = info.classes
