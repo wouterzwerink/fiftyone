@@ -41,6 +41,7 @@ fod = fou.lazy_import("fiftyone.core.dataset")
 fos = fou.lazy_import("fiftyone.core.stages")
 fov = fou.lazy_import("fiftyone.core.view")
 foua = fou.lazy_import("fiftyone.utils.annotations")
+foub = fou.lazy_import("fiftyone.utils.beam")
 foud = fou.lazy_import("fiftyone.utils.data")
 foue = fou.lazy_import("fiftyone.utils.eval")
 
@@ -5739,6 +5740,7 @@ class SampleCollection(object):
         label_field=None,
         frame_labels_field=None,
         overwrite=False,
+        num_shards=None,
         **kwargs,
     ):
         """Exports the samples in the collection to disk.
@@ -5909,6 +5911,23 @@ class SampleCollection(object):
                 this can also contain keyword arguments for
                 :class:`fiftyone.utils.patches.ImagePatchesExtractor`
         """
+        if num_shards is not None:
+            foub.beam_export(
+                self,
+                num_shards,
+                export_dir=export_dir,
+                dataset_type=dataset_type,
+                data_path=data_path,
+                labels_path=labels_path,
+                export_media=export_media,
+                dataset_exporter=dataset_exporter,
+                label_field=label_field,
+                frame_labels_field=frame_labels_field,
+                overwrite=overwrite,
+                **kwargs,
+            )
+            return
+
         if export_dir is not None and etau.is_archive(export_dir):
             archive_path = export_dir
             export_dir = etau.split_archive(archive_path)[0]
