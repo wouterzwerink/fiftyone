@@ -97,16 +97,19 @@ def beam_import(
             direct_running_mode="multi_threading",
         )
 
-    sample0, samples = _pop_first(samples)
+    if expand_schema:
+        sample0, samples = _pop_first(samples)
 
-    if sample0 is None:
-        return  # empty
+        if sample0 is None:
+            return  # empty
 
-    if parse_fcn is not None:
-        sample0 = parse_fcn(sample0)
+        if parse_fcn is not None:
+            sample0 = parse_fcn(sample0)
 
-    # Manually insert first sample to reduce chances of parallel schema changes
-    dataset.add_sample(sample0, expand_schema=expand_schema, validate=validate)
+        # Insert a sample first to reduce chances of parallel schema changes
+        dataset.add_sample(
+            sample0, expand_schema=expand_schema, validate=validate
+        )
 
     if parse_fcn is None:
         # `Sample` objects are not serializable so we must manually serialize
@@ -180,7 +183,6 @@ def beam_merge(
         **kwargs: keyword arguments for
             :meth:`fiftyone.core.dataset.Dataset.merge_samples`
     """
-
     # If the merge does not require a `key_fcn`, then it is fastest to import
     # the samples into a temporary collection and then merge that
     if kwargs.get("key_fcn", None) is None:
