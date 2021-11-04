@@ -116,8 +116,9 @@ def add_labeled_images(
             :class:`fiftyone.core.labels.Label` instance per sample, this
             argument specifies the name of the field to use; the default is
             ``"ground_truth"``. If the parser produces a dictionary of labels
-            per sample, this argument specifies a string prefix to prepend to
-            each label key; the default in this case is to directly use the
+            per sample, this argument can be a string prefix to prepend to each
+            label key or a dict mapping keys of the imported label dictionaries
+            to field names; the default in this case is to directly use the
             keys of the imported label dictionaries as field names
         tags (None): an optional tag or iterable of tags to attach to each
             sample
@@ -143,11 +144,7 @@ def add_labeled_images(
             )
         )
 
-    if label_field:
-        label_key = lambda k: label_field + "_" + k
-    else:
-        label_field = "ground_truth"
-        label_key = lambda k: k
+    label_field, label_key = _parse_label_field(label_field)
 
     if etau.is_str(tags):
         tags = [tags]
@@ -168,10 +165,7 @@ def add_labeled_images(
 
         sample = fos.Sample(filepath=image_path, metadata=metadata, tags=tags)
 
-        if isinstance(label, dict):
-            sample.update_fields({label_key(k): v for k, v in label.items()})
-        elif label is not None:
-            sample[label_field] = label
+        _add_label(sample, label, label_field, label_key)
 
         return sample
 
@@ -280,12 +274,13 @@ def add_labeled_videos(
             parse the samples
         label_field (None): controls the field(s) in which imported labels are
             stored. If the parser produces a single
-            :class:`fiftyone.core.labels.Label` instance per sample/frame, this
+            :class:`fiftyone.core.labels.Label` instance per sample, this
             argument specifies the name of the field to use; the default is
             ``"ground_truth"``. If the parser produces a dictionary of labels
-            per sample/frame, this argument specifies a string prefix to
-            prepend to each label key; the default in this case is to directly
-            use the keys of the imported label dictionaries as field names
+            per sample, this argument can be a string prefix to prepend to each
+            label key or a dict mapping keys of the imported label dictionaries
+            to field names; the default in this case is to directly use the
+            keys of the imported label dictionaries as field names
         tags (None): an optional tag or iterable of tags to attach to each
             sample
         expand_schema (True): whether to dynamically add new sample fields
@@ -304,11 +299,7 @@ def add_labeled_videos(
             )
         )
 
-    if label_field:
-        label_key = lambda k: label_field + "_" + k
-    else:
-        label_field = "ground_truth"
-        label_key = lambda k: k
+    label_field, label_key = _parse_label_field(label_field)
 
     if etau.is_str(tags):
         tags = [tags]
@@ -330,24 +321,7 @@ def add_labeled_videos(
 
         sample = fos.Sample(filepath=video_path, metadata=metadata, tags=tags)
 
-        if isinstance(label, dict):
-            sample.update_fields({label_key(k): v for k, v in label.items()})
-        elif label is not None:
-            sample[label_field] = label
-
-        if frames is not None:
-            frame_labels = {}
-
-            for frame_number, _label in frames.items():
-                if isinstance(_label, dict):
-                    frame_labels[frame_number] = {
-                        label_key(field_name): label
-                        for field_name, label in _label.items()
-                    }
-                elif _label is not None:
-                    frame_labels[frame_number] = {label_field: _label}
-
-            sample.frames.merge(frame_labels)
+        _add_video_labels(sample, label, frames, label_field, label_key)
 
         return sample
 
@@ -360,6 +334,61 @@ def add_labeled_videos(
     return dataset.add_samples(
         _samples, expand_schema=expand_schema, num_samples=num_samples
     )
+
+
+def _parse_label_field(label_field):
+    if isinstance(label_field, dict):
+        label_key = lambda k: label_field.get(k, None)
+        return "ground_truth", label_key
+
+    if not label_field:
+        label_key = lambda k: k
+        return "ground_truth", label_key
+
+    label_key = lambda k: label_field + "_" + k
+    return label_field, label_key
+
+
+def _add_label(sample, label, label_field, label_key):
+    if isinstance(label, dict):
+        labels_dict = {}
+        for k, v in label.items():
+            key = label_key(k)
+            if key is not None:
+                labels_dict[key] = v
+
+        sample.update_fields(labels_dict)
+    elif label is not None:
+        sample[label_field] = label
+
+
+def _add_video_labels(sample, label, frames, label_field, label_key):
+    if isinstance(label, dict):
+        labels_dict = {}
+        for k, v in label.items():
+            key = label_key(k)
+            if key is not None:
+                labels_dict[key] = v
+
+        sample.update_fields(labels_dict)
+    elif label is not None:
+        sample[label_field] = label
+
+    if frames is not None:
+        frame_labels = {}
+        for frame_number, _label in frames.items():
+            if isinstance(_label, dict):
+                labels_dict = {}
+                for k, v in _label.items():
+                    key = label_key(k)
+                    if key is not None:
+                        labels_dict[key] = v
+
+                frame_labels[frame_number] = labels_dict
+            elif _label is not None:
+                frame_labels[frame_number] = {label_field: _label}
+
+        sample.frames.merge(frame_labels)
 
 
 class SampleParser(object):
