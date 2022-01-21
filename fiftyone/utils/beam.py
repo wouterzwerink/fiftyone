@@ -329,6 +329,65 @@ def beam_export(
             )
 
 
+def beam_do(sample_collection, fcn, options=None, verbose=False):
+    if options is None:
+        num_workers = multiprocessing.cpu_count()
+        options = PipelineOptions(
+            runner="direct",
+            direct_num_workers=num_workers,
+            direct_running_mode="multi_processing",
+        )
+
+    if isinstance(sample_collection, fov.DatasetView):
+        dataset_name = sample_collection._root_dataset.name
+        view_stages = sample_collection._serialize()
+    else:
+        dataset_name = sample_collection.name
+        view_stages = None
+
+    do_batch = DoBatch(fcn, dataset_name, view_stages=view_stages)
+
+    sample_ids = sample_collection.values("id")
+
+    logger = logging.getLogger()
+    level = logger.level if verbose else logging.CRITICAL
+    with fou.SetAttributes(logger, level=level):
+        with beam.Pipeline(options=options) as pipeline:
+            _ = (
+                pipeline
+                | "InitDo" >> beam.Create(sample_ids)
+                | "DoBatches" >> beam.ParDo(do_batch)
+            )
+
+
+class DoBatch(beam.DoFn):
+    def __init__(self, fcn, dataset_name, view_stages=None):
+        self.fcn = fcn
+        self.dataset_name = dataset_name
+        self.view_stages = view_stages
+
+        self._sample_collection = None
+
+    def setup(self):
+        import fiftyone as fo
+        import fiftyone.core.view as fov
+
+        dataset = fo.load_dataset(self.dataset_name)
+
+        if self.view_stages:
+            sample_collection = fov.DatasetView._build(
+                dataset, self.view_stages
+            )
+        else:
+            sample_collection = dataset
+
+        self._sample_collection = sample_collection
+
+    def process(self, sample_id):
+        sample = self._sample_collection[sample_id]
+        self.fcn(sample)
+
+
 class ImportBatch(beam.DoFn):
     def __init__(
         self, dataset_name, parse_fcn=None, expand_schema=True, validate=True
