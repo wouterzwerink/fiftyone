@@ -1,0 +1,14 @@
+{
+    "name": "@fiftyone/test-app",
+    "license": "Apache-2.0",
+    "version": "0.0.0",
+    "private": true,
+    "main": "./src/index.tsx",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build"
+    },
+    "devDependencies": {
+        "vite": "^3.1.4"
+    }
+}
