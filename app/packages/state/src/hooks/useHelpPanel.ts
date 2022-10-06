@@ -20,8 +20,18 @@ export default function useHelpPanel() {
       help: update(fullState.help),
     }));
   const { isOpen, items } = state.help || {};
+
   function close() {
-    setState((s) => ({ ...s, isOpen: false }));
+    setFullState((fullState) => {
+      if (!fullState.help.isOpen) return fullState;
+      return {
+        ...fullState,
+        help: {
+          ...fullState.help,
+          isOpen: false,
+        },
+      };
+    });
   }
 
   function handleClick() {

@@ -35,9 +35,17 @@ export default function useJSONPanel() {
     () => ({ __html: highlightJSON(json, JSON_COLORS) }),
     [json]
   );
+
   function close() {
-    setState((s) => {
-      ({ ...s, isOpen: false });
+    setFullState((fullState) => {
+      if (!fullState.json.isOpen) return fullState;
+      return {
+        ...fullState,
+        json: {
+          ...fullState.json,
+          isOpen: false,
+        },
+      };
     });
   }
 
