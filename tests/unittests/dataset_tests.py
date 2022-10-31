@@ -2086,6 +2086,227 @@ class DatasetTests(unittest.TestCase):
             )
 
 
+class DatasetExtrasTests(unittest.TestCase):
+    @drop_datasets
+    def setUp(self):
+        self.dataset = fo.Dataset()
+        self.dataset.add_samples(
+            [
+                fo.Sample(
+                    filepath="image1.png",
+                    ground_truth=fo.Classification(label="cat"),
+                    predictions=fo.Classification(label="dog", confidence=0.9),
+                ),
+                fo.Sample(
+                    filepath="image2.png",
+                    ground_truth=fo.Classification(label="dog"),
+                    predictions=fo.Classification(label="dog", confidence=0.8),
+                ),
+                fo.Sample(
+                    filepath="image3.png",
+                    ground_truth=fo.Classification(label="dog"),
+                    predictions=fo.Classification(label="pig", confidence=0.1),
+                ),
+            ]
+        )
+
+    def test_saved_views(self):
+        dataset = self.dataset
+
+        self.assertFalse(dataset.has_views)
+        self.assertListEqual(dataset.list_views(), [])
+
+        view = dataset.match(F("filepath").contains_str("image2"))
+
+        self.assertEqual(len(view), 1)
+        self.assertTrue("image2" in view.first().filepath)
+
+        dataset.save_view("test", view)
+
+        last_loaded_at1 = dataset._doc.views[0].last_loaded_at
+        last_modified_at1 = dataset._doc.views[0].last_modified_at
+
+        self.assertTrue(dataset.has_views)
+        self.assertTrue(dataset.has_view("test"))
+        self.assertListEqual(dataset.list_views(), ["test"])
+
+        self.assertIsNone(last_loaded_at1)
+        self.assertIsNotNone(last_modified_at1)
+
+        also_view = dataset.load_view("test")
+        last_loaded_at2 = dataset._doc.views[0].last_loaded_at
+
+        self.assertEqual(view, also_view)
+        self.assertIsNotNone(last_loaded_at2)
+
+        info = dataset.get_view_info("test")
+        info["name"] = "new-name"
+
+        dataset.update_view_info("test", info)
+        last_modified_at2 = dataset._doc.views[0].last_modified_at
+
+        self.assertTrue(last_modified_at2 > last_modified_at1)
+        self.assertFalse(dataset.has_view("test"))
+        self.assertTrue(dataset.has_view("new-name"))
+
+        dataset.update_view_info("new-name", {"name": "test"})
+
+        #
+        # Verify that saved views are included in clones
+        #
+
+        dataset2 = dataset.clone()
+
+        self.assertTrue(dataset2.has_views)
+        self.assertTrue(dataset2.has_view("test"))
+        self.assertListEqual(dataset2.list_views(), ["test"])
+
+        view2 = dataset2.load_view("test")
+
+        self.assertEqual(len(view2), 1)
+        self.assertTrue("image2" in view2.first().filepath)
+
+        dataset.delete_view("test")
+
+        self.assertFalse(dataset.has_views)
+        self.assertFalse(dataset.has_view("test"))
+        self.assertListEqual(dataset.list_views(), [])
+
+        # Verify that cloned data is properly decoupled from source dataset
+        also_view2 = dataset2.load_view("test")
+        self.assertIsNotNone(also_view2)
+
+        #
+        # Verify that saved views are deleted when a dataset is deleted
+        #
+
+        view_id = dataset2._doc.views[0].id
+
+        db = foo.get_db_conn()
+
+        self.assertEqual(len(list(db.views.find({"_id": view_id}))), 1)
+
+        dataset2.delete()
+
+        self.assertEqual(len(list(db.views.find({"_id": view_id}))), 0)
+
+    def test_saved_views_for_app(self):
+        dataset = self.dataset
+
+        names = ["my-view1", "my_view2", "My  %&#  View3!"]
+        url_names = ["my-view1", "my-view2", "my-view3"]
+
+        for idx, name in enumerate(names, 1):
+            dataset.save_view(name, dataset.limit(idx))
+
+        # Can't use duplicate name when saving a view
+        with self.assertRaises(ValueError):
+            dataset.save_view("my-view1", dataset.limit(1))
+
+        # Can't use duplicate URL name when saving a view
+        with self.assertRaises(ValueError):
+            dataset.save_view("my   view1", dataset.limit(1))
+
+        # Can't rename a view to an existing name
+        with self.assertRaises(ValueError):
+            dataset.update_view_info("my-view1", {"name": "my_view2"})
+
+        # Can't rename a view to an existing URL name
+        with self.assertRaises(ValueError):
+            dataset.update_view_info("my-view1", {"name": "my_view2!"})
+
+        view_docs = dataset._views()
+
+        self.assertListEqual([v.name for v in view_docs], names)
+        self.assertListEqual([v.url_name for v in view_docs], url_names)
+
+        # Wrong list of indexes
+        with self.assertRaises(ValueError):
+            dataset._reorder_views([3, 2, 1, 0])
+
+        dataset._reorder_views([2, 1, 0])
+
+        self.assertListEqual(
+            [v.name for v in dataset._views()],
+            list(reversed(names)),
+        )
+
+        dataset.delete_view("my_view2")
+
+        self.assertListEqual(
+            [v.name for v in dataset._views()],
+            [names[2], names[0]],
+        )
+
+        dataset.delete_views()
+
+        self.assertListEqual(dataset._views(), [])
+
+    def test_runs(self):
+        dataset = self.dataset
+
+        self.assertFalse(dataset.has_evaluations)
+        self.assertListEqual(dataset.list_evaluations(), [])
+
+        # We currently use only evaluations as a proxy for all run types
+        dataset.evaluate_classifications(
+            "predictions",
+            gt_field="ground_truth",
+            eval_key="eval",
+        )
+
+        self.assertTrue(dataset.has_evaluations)
+        self.assertTrue(dataset.has_evaluation("eval"))
+        self.assertListEqual(dataset.list_evaluations(), ["eval"])
+
+        results = dataset.load_evaluation_results("eval")
+
+        self.assertIsNotNone(results)
+
+        #
+        # Verify that runs are included in clones
+        #
+
+        dataset2 = dataset.clone()
+
+        self.assertTrue(dataset2.has_evaluations)
+        self.assertTrue(dataset2.has_evaluation("eval"))
+        self.assertListEqual(dataset2.list_evaluations(), ["eval"])
+
+        results = dataset.load_evaluation_results("eval")
+
+        self.assertIsNotNone(results)
+
+        dataset.delete_evaluation("eval")
+
+        self.assertFalse(dataset.has_evaluations)
+        self.assertFalse(dataset.has_evaluation("eval"))
+        self.assertListEqual(dataset.list_evaluations(), [])
+
+        # Verify that cloned data is properly decoupled from source dataset
+        info = dataset2.get_evaluation_info("eval")
+        results = dataset2.load_evaluation_results("eval")
+        self.assertIsNotNone(info)
+        self.assertIsNotNone(results)
+
+        #
+        # Verify that runs are deleted when a dataset is deleted
+        #
+
+        run_id = dataset2._doc.evaluations["eval"].id
+        result_id = dataset2._doc.evaluations["eval"].results.grid_id
+
+        db = foo.get_db_conn()
+
+        self.assertEqual(len(list(db.runs.find({"_id": run_id}))), 1)
+        self.assertEqual(len(list(db.fs.files.find({"_id": result_id}))), 1)
+
+        dataset2.delete()
+
+        self.assertEqual(len(list(db.runs.find({"_id": run_id}))), 0)
+        self.assertEqual(len(list(db.fs.files.find({"_id": result_id}))), 0)
+
+
 class DatasetSerializationTests(unittest.TestCase):
     @drop_datasets
     def test_serialize_sample(self):

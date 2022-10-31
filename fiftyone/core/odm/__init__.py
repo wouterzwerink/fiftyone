@@ -25,7 +25,8 @@ from .database import (
     delete_brain_runs,
     drop_collection,
     drop_orphan_collections,
-    drop_orphan_run_results,
+    drop_orphan_views,
+    drop_orphan_runs,
     list_collections,
     get_collection_stats,
     stream_collection,
@@ -57,6 +58,7 @@ from .mixins import (
     get_default_fields,
     validate_fields_match,
 )
+from .runs import RunDocument
 from .sample import (
     DatasetSampleDocument,
     NoDatasetSampleDocument,
@@ -68,6 +70,7 @@ from .utils import (
     get_field_kwargs,
     get_implied_field_kwargs,
 )
+from .views import ViewDocument
 
 # This enables Sphinx refs to directly use paths imported here
 __all__ = [

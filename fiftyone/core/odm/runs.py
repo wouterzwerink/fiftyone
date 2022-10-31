@@ -13,14 +13,14 @@ from mongoengine import (
     FileField,
 )
 
-from .embedded_document import EmbeddedDocument
+from .document import Document
 
 
-class RunDocument(EmbeddedDocument):
-    """Description of a run on a dataset."""
+class RunDocument(Document):
+    """Backing document for dataset runs."""
 
     # strict=False lets this class ignore unknown fields from other versions
-    meta = {"strict": False}
+    meta = {"collection": "runs", "strict": False}
 
     key = StringField()
     version = StringField()

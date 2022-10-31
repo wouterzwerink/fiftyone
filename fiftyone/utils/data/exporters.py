@@ -1701,30 +1701,37 @@ class LegacyFiftyOneDatasetExporter(GenericSampleDatasetExporter):
 
         self._metadata["info"] = info
 
-        # Exporting runs only makes sense if the entire dataset is being
-        # exported, otherwise the view for the run cannot be reconstructed
-        # based on the information encoded in the run's document
-
         dataset = sample_collection._root_dataset
         if sample_collection != dataset:
             return
 
+        # Exporting the information below only makes sense when exporting an
+        # entire dataset
+
+        if dataset.has_views:
+            self._metadata["views"] = [
+                json_util.dumps(v.to_dict()) for v in dataset._doc.views
+            ]
+
         if dataset.has_annotation_runs:
-            d = dataset._doc.field_to_mongo("annotation_runs")
-            d = {k: json_util.dumps(v) for k, v in d.items()}
-            self._metadata["annotation_runs"] = d
+            self._metadata["annotation_runs"] = {
+                k: json_util.dumps(v.to_dict())
+                for k, v in dataset._doc.annotation_runs.items()
+            }
             _export_annotation_results(dataset, self._anno_dir)
 
         if dataset.has_brain_runs:
-            d = dataset._doc.field_to_mongo("brain_methods")
-            d = {k: json_util.dumps(v) for k, v in d.items()}
-            self._metadata["brain_methods"] = d
+            self._metadata["brain_methods"] = {
+                k: json_util.dumps(v.to_dict())
+                for k, v in dataset._doc.brain_methods.items()
+            }
             _export_brain_results(dataset, self._brain_dir)
 
         if dataset.has_evaluations:
-            d = dataset._doc.field_to_mongo("evaluations")
-            d = {k: json_util.dumps(v) for k, v in d.items()}
-            self._metadata["evaluations"] = d
+            self._metadata["evaluations"] = {
+                k: json_util.dumps(v.to_dict())
+                for k, v in dataset._doc.evaluations.items()
+            }
             _export_evaluation_results(dataset, self._eval_dir)
 
     def export_sample(self, sample):
@@ -1789,6 +1796,8 @@ class FiftyOneDatasetExporter(BatchDatasetExporter):
             allows for populating nested subdirectories that match the shape of
             the input paths. The path is converted to an absolute path (if
             necessary) via :func:`fiftyone.core.utils.normalize_path`
+        export_views (True): whether to include saved views in the export.
+            Only applicable when exporting full datasets
         export_runs (True): whether to include annotation/brain/evaluation
             runs in the export. Only applicable when exporting full datasets
         use_dirs (False): whether to export metadata into directories of per
@@ -1802,6 +1811,7 @@ class FiftyOneDatasetExporter(BatchDatasetExporter):
         export_dir,
         export_media=None,
         rel_dir=None,
+        export_views=True,
         export_runs=True,
         use_dirs=False,
         ordered=True,
@@ -1816,6 +1826,7 @@ class FiftyOneDatasetExporter(BatchDatasetExporter):
 
         self.export_media = export_media
         self.rel_dir = rel_dir
+        self.export_views = export_views
         self.export_runs = export_runs
         self.use_dirs = use_dirs
         self.ordered = ordered
@@ -1929,31 +1940,49 @@ class FiftyOneDatasetExporter(BatchDatasetExporter):
 
         dataset = sample_collection._dataset
         dataset_dict = dataset._doc.to_dict()
+        dataset_dict["views"] = {}
+        dataset_dict["annotation_runs"] = {}
+        dataset_dict["brain_methods"] = {}
+        dataset_dict["evaluations"] = {}
 
-        # Exporting runs only makes sense if the entire dataset is being
+        #
+        # Exporting views/runs only makes sense if the entire dataset is being
         # exported, otherwise the view for the run cannot be reconstructed
         # based on the information encoded in the run's document
+        #
 
-        export_runs = (
+        _export_views = (
+            self.export_views
+            and sample_collection == sample_collection._root_dataset
+        )
+
+        _export_runs = (
             self.export_runs
             and sample_collection == sample_collection._root_dataset
         )
 
-        if not export_runs:
-            dataset_dict["annotation_runs"] = {}
-            dataset_dict["brain_methods"] = {}
-            dataset_dict["evaluations"] = {}
+        if _export_views and dataset.has_views:
+            dataset_dict["views"] = [v.to_dict() for v in dataset._doc.views]
+
+        if _export_runs and dataset.has_annotation_runs:
+            dataset_dict["annotation_runs"] = {
+                k: v.to_dict() for k, v in dataset._doc.annotation_runs.items()
+            }
+            _export_annotation_results(dataset, self._anno_dir)
+
+        if _export_runs and dataset.has_brain_runs:
+            dataset_dict["brain_methods"] = {
+                k: v.to_dict() for k, v in dataset._doc.brain_methods.items()
+            }
+            _export_brain_results(dataset, self._brain_dir)
+
+        if _export_runs and dataset.has_evaluations:
+            dataset_dict["evaluations"] = {
+                k: v.to_dict() for k, v in dataset._doc.evaluations.items()
+            }
+            _export_evaluation_results(dataset, self._eval_dir)
 
         foo.export_document(dataset_dict, self._metadata_path)
-
-        if export_runs and sample_collection.has_annotation_runs:
-            _export_annotation_results(sample_collection, self._anno_dir)
-
-        if export_runs and sample_collection.has_brain_runs:
-            _export_brain_results(sample_collection, self._brain_dir)
-
-        if export_runs and sample_collection.has_evaluations:
-            _export_evaluation_results(sample_collection, self._eval_dir)
 
         self._media_exporter.close()
 
