@@ -80,6 +80,23 @@ class Mutation:
         await dispatch_event(subscription, StateUpdate(state=state))
         return True
 
+    # @gql.mutation
+    # async def save_view(
+    #     self,
+    #     subscription: str,
+    #     session: t.Optional[str],
+    #     view: BSONArray,
+    #     dataset: str,
+    #     info: Info,
+    # ) -> ViewResponse:
+    #     state = get_state()
+    #     state.selected = []
+    #     state.selected_labels = []
+    #     state.view = fov.DatasetView._build(state.dataset, view)
+    #     await dispatch_event(subscription, StateUpdate(state=state))
+    #     dataset = await Dataset.resolver(state.dataset.name, view, info)
+    #     return ViewResponse(view=state.view._serialize(), dataset=dataset)
+
     @gql.mutation
     async def set_view(
         self,

@@ -261,7 +261,28 @@ class AppConfig:
 
 
 @gql.type
+class SavedView:
+    dataset_id: str
+    name: str
+    url_name: str
+    description: t.Optional[str]
+    color: t.Optional[str]
+    view_stages: t.List[str]
+
+
+@gql.type
+class DatasetViews:
+    views: t.List[SavedView]
+    samples_count: int
+
+
+@gql.type
 class Query:
+    @gql.field
+    def dataset_views(self, dataset_slug: str) -> DatasetViews:
+        print("dataset_views queried", dataset_slug)
+        return DatasetViews(views=[], samples_count=10)
+
     @gql.field
     def colorscale(self) -> t.Optional[t.List[t.List[int]]]:
         if fo.app_config.colorscale:
