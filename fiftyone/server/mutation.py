@@ -100,13 +100,12 @@ class Mutation:
             state.view = fov.DatasetView._build(state.dataset, view)
         await dispatch_event(subscription, StateUpdate(state=state))
         dataset = await Dataset.resolver(
-            name=state.dataset.name,  # TODO: should this be dataset_name?
+            name=dataset_name,
             view=view,
             view_name=view_name if view_name else state.view.name,
             info=info,
         )
         return ViewResponse(
-            # TODO: should this be view_stages?
             view=state.view._serialize(),
             dataset=dataset,
             view_name=view_name if view_name else state.view.name,
