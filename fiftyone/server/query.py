@@ -113,6 +113,38 @@ class EvaluationRun(Run):
 
 
 @gql.type
+class SavedView:
+    dataset_id: str
+    name: str
+    url_name: str
+    description: t.Optional[str]
+    color: t.Optional[str]
+    view_stages: t.List[str]
+    created_at = t.Optional[datetime]
+    last_modified_at = t.Optional[datetime]
+    last_loaded_at = t.Optional[datetime]
+
+    @gql.field
+    def view_name(self) -> str:
+        return self.name
+
+    @gql.field
+    def created_at(self) -> t.Optional[datetime]:
+        # pylint: disable=function-redefined
+        return self.created_at
+
+    @gql.field
+    def last_modified_at(self) -> t.Optional[datetime]:
+        # pylint: disable=function-redefined
+        return self.last_modified_at
+
+    @gql.field
+    def last_loaded_at(self) -> t.Optional[datetime]:
+        # pylint: disable=function-redefined
+        return self.last_loaded_at
+
+
+@gql.type
 class SidebarGroup:
     name: str
     paths: t.Optional[t.List[str]]
@@ -156,6 +188,7 @@ class Dataset:
     frame_fields: t.List[SampleField]
     brain_methods: t.List[BrainRun]
     evaluations: t.List[EvaluationRun]
+    saved_views: t.Optional[t.List[SavedView]]
     version: t.Optional[str]
     view_cls: t.Optional[str]
     default_skeleton: t.Optional[KeypointSkeleton]
@@ -176,6 +209,7 @@ class Dataset:
         doc["frame_fields"] = _flatten_fields([], doc.get("frame_fields", []))
         doc["brain_methods"] = list(doc.get("brain_methods", {}).values())
         doc["evaluations"] = list(doc.get("evaluations", {}).values())
+        doc["saved_views"] = doc.get("saved_views", [])
         doc["skeletons"] = list(
             dict(name=name, **data)
             for name, data in doc.get("skeletons", {}).items()
@@ -189,7 +223,11 @@ class Dataset:
 
     @classmethod
     async def resolver(
-        cls, name: str, view: t.Optional[BSONArray], info: Info
+        cls,
+        name: str,
+        view_stages: t.Optional[BSONArray],
+        view_name: t.Optional[str],
+        info: Info,
     ) -> t.Optional["Dataset"]:
         assert info is not None
         dataset = await dataset_dataloader(name, info)
@@ -198,7 +236,16 @@ class Dataset:
 
         ds = fo.load_dataset(name)
         ds.reload()
-        view = fov.DatasetView._build(ds, view or [])
+
+        # TODO: Check if we need to consider the case where view_name and
+        #  view_stages are both given and how to handle it
+        if view_name and ds.has_view(view_name):
+            dataset.view_name = view_name
+            view = ds.load_view(view_name)
+        else:
+            view = fov.DatasetView._build(ds, view_stages or [])
+            dataset.view_name = view.name
+
         if view._dataset != ds:
             d = view._dataset._serialize()
             dataset.id = view._dataset._doc.id
@@ -213,6 +260,7 @@ class Dataset:
             ]
 
             dataset.view_cls = etau.get_class_name(view)
+            dataset.saved_views = d.get("saved_views", [])
 
         if view.media_type != ds.media_type:
             dataset.id = ObjectId()
