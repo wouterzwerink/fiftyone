@@ -120,28 +120,13 @@ class SavedView:
     description: t.Optional[str]
     color: t.Optional[str]
     view_stages: t.List[str]
-    created_at = t.Optional[datetime]
-    last_modified_at = t.Optional[datetime]
-    last_loaded_at = t.Optional[datetime]
+    created_at: datetime
+    last_modified_at: t.Optional[datetime]
+    last_loaded_at: t.Optional[datetime]
 
     @gql.field
     def view_name(self) -> str:
         return self.name
-
-    @gql.field
-    def created_at(self) -> t.Optional[datetime]:
-        # pylint: disable=function-redefined
-        return self.created_at
-
-    @gql.field
-    def last_modified_at(self) -> t.Optional[datetime]:
-        # pylint: disable=function-redefined
-        return self.last_modified_at
-
-    @gql.field
-    def last_loaded_at(self) -> t.Optional[datetime]:
-        # pylint: disable=function-redefined
-        return self.last_loaded_at
 
 
 @gql.type
@@ -225,7 +210,7 @@ class Dataset:
     async def resolver(
         cls,
         name: str,
-        view_stages: t.Optional[BSONArray],
+        view: t.Optional[BSONArray],
         view_name: t.Optional[str],
         info: Info,
     ) -> t.Optional["Dataset"]:
@@ -239,16 +224,17 @@ class Dataset:
 
         # TODO: Check if we need to consider the case where view_name and
         #  view_stages are both given and how to handle it
+        dataset_view = None
         if view_name and ds.has_view(view_name):
             dataset.view_name = view_name
-            view = ds.load_view(view_name)
+            dataset_view = ds.load_view(view_name)
         else:
-            view = fov.DatasetView._build(ds, view_stages or [])
-            dataset.view_name = view.name
+            dataset_view = fov.DatasetView._build(ds, view or [])
+            dataset.view_name = dataset_view.name
 
-        if view._dataset != ds:
-            d = view._dataset._serialize()
-            dataset.id = view._dataset._doc.id
+        if dataset_view._dataset != ds:
+            d = dataset_view._dataset._serialize()
+            dataset.id = dataset_view._dataset._doc.id
             dataset.media_type = d["media_type"]
             dataset.sample_fields = [
                 from_dict(SampleField, s)
@@ -262,12 +248,12 @@ class Dataset:
             dataset.view_cls = etau.get_class_name(view)
             dataset.saved_views = d.get("saved_views", [])
 
-        if view.media_type != ds.media_type:
+        if dataset_view.media_type != ds.media_type:
             dataset.id = ObjectId()
-            dataset.media_type = view.media_type
+            dataset.media_type = dataset_view.media_type
 
         if dataset.media_type == fom.GROUP:
-            dataset.group_slice = view.group_slice
+            dataset.group_slice = dataset_view.group_slice
 
         # old dataset docs, e.g. from imports have frame fields attached even for
         # image datasets. we need to remove them

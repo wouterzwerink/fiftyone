@@ -12,7 +12,7 @@ import { graphql } from "relay-runtime";
 const DatasetQueryNode = graphql`
   query DatasetQuery(
     $name: String!
-    $viewStages: BSONArray = null
+    $view: BSONArray = null
     $viewName: String = null
   ) {
     dataset(name: $name, view: $view, viewName: $viewName) {
@@ -102,7 +102,6 @@ const DatasetQueryNode = graphql`
       }
       version
       viewCls
-      viewName
       appConfig {
         mediaFields
         gridMediaField
