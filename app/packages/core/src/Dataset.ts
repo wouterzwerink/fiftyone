@@ -7,10 +7,15 @@ import {
   DatasetQuery,
   DatasetQuery$data,
 } from "./__generated__/DatasetQuery.graphql";
+import { graphql } from "relay-runtime";
 
 const DatasetQueryNode = graphql`
-  query DatasetQuery($name: String!, $view: BSONArray = null) {
-    dataset(name: $name, view: $view) {
+  query DatasetQuery(
+    $name: String!
+    $viewStages: BSONArray = null
+    $viewName: String = null
+  ) {
+    dataset(name: $name, view: $view, viewName: $viewName) {
       id
       name
       mediaType
@@ -73,6 +78,17 @@ const DatasetQueryNode = graphql`
           patchesField
         }
       }
+      savedViews {
+        datasetId
+        name
+        urlName
+        description
+        color
+        viewStages
+        createdAt
+        lastModifiedAt
+        lastLoadedAt
+      }
       lastLoadedAt
       createdAt
       skeletons {
@@ -86,6 +102,7 @@ const DatasetQueryNode = graphql`
       }
       version
       viewCls
+      viewName
       appConfig {
         mediaFields
         gridMediaField
