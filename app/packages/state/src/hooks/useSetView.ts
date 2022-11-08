@@ -36,7 +36,7 @@ const useSetView = () => {
               subscription,
               session,
               view: value,
-              dataset: dataset.name,
+              datasetName: dataset.name,
             },
             onError,
             onCompleted: ({ setView: { dataset, view: value } }) => {
