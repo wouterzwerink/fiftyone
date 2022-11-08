@@ -55,10 +55,12 @@ class StateDescription(etas.Serializable):
             if self.dataset is not None:
                 d["dataset"] = self.dataset.name
                 if self.view is not None:
-                    d["view"] = json.loads(
+                    d["view_stages"] = json.loads(
                         json_util.dumps(self.view._serialize())
                     )
                     d["view_cls"] = etau.get_class_name(self.view)
+                    d["view_name"] = self.view.name
+                d["saved_views"] = self.dataset.saved_views
 
                 view = self.view if self.view is not None else self.dataset
                 if view.media_type == fom.GROUP:
