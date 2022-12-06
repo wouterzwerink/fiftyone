@@ -3036,6 +3036,30 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
         """
         self.delete_samples(samples_or_ids)
 
+    @property
+    def all_views_v2(self):
+        """Returns the saved views on this dataset.
+
+        Returns:
+           a list of saved views
+           TODO: TALK TO KACEY
+        """
+        return []
+
+    #    res = [
+    #        {
+    #            "id": v.id,
+    #            "dataset_id": self._doc.id,
+    #            "name": v.name,
+    #            "url_name": v.slug,
+    #            "description": v.description,
+    #            "color": v.color,
+    #            "created_at": v.created_at,
+    #        }
+    #        for v in self._doc.saved_views
+    #    ]
+    #    return res
+
     def save(self):
         """Saves the dataset to the database.
 
@@ -3253,11 +3277,13 @@ class Dataset(foc.SampleCollection, metaclass=DatasetSingleton):
             name: the name of a saved view
         """
         view_doc = self._get_saved_view_doc(name, pop=True)
-        deleted_id = view_doc._id
+        print("view_doc", view_doc)
+        # TODO: TALK TO KACEY
+        # deleted_id = view_doc._id
 
         view_doc.delete()
         self._doc.save()
-        return deleted_id
+        return True
 
     def delete_saved_views(self):
         """Deletes all saved views from this dataset."""

@@ -85,12 +85,17 @@ const App: React.FC = ({}) => {
             case Events.STATE_UPDATE: {
               const payload = JSON.parse(msg.data);
               const { colorscale, config, ...data } = payload.state;
+              const {
+                update: isAnUpdate,
+                changing_saved_view: isChangingSavedView,
+              } = payload;
               payload.refresh && refresh();
 
               const state = {
                 ...toCamelCase(data),
                 view: data.view,
                 viewName: getSavedViewName(contextRef.current),
+                changingSavedView: isChangingSavedView,
               } as State.Description;
               let dataset = getDatasetName(contextRef.current);
               if (readyStateRef.current !== AppReadyState.OPEN) {
@@ -102,19 +107,53 @@ const App: React.FC = ({}) => {
                 dataset = state.dataset;
               }
 
-              const path = state.dataset
-                ? `/datasets/${encodeURIComponent(state.dataset)}${
-                    window.location.search
-                  }`
-                : `/${window.location.search}`;
+              // !isAnUpdate means it is an initial load for the active tab
+              let savedViewSlug = isAnUpdate
+                ? state.savedViewSlug
+                : state.viewName || "";
 
-              contextRef.current.history.replace(path, {
-                state,
-                colorscale,
-                config,
-                refresh: payload.refresh,
-                variables: dataset ? { view: state.view || null } : undefined,
-              });
+              const url = new URL(window.location.toString());
+              const oldPath = url.pathname + `${url.search}`;
+
+              // getting an update and not changing saved view
+              if (isAnUpdate && !isChangingSavedView) {
+                url.searchParams.delete("view");
+              } else if (savedViewSlug) {
+                // set saved view param
+                url.searchParams.set("view", savedViewSlug);
+              } else {
+                // remove param entirely
+                url.searchParams.delete("view");
+              }
+
+              let search = url.searchParams.toString();
+              if (search.length) {
+                search = `?${search}`;
+              }
+
+              const path = state.dataset
+                ? `/datasets/${encodeURIComponent(state.dataset)}${search}`
+                : `/${search}`;
+
+              /*
+              only replace url if
+                - is an update and not changing changing saved view
+                - OR path has changed (saved view changed)
+                - OR is not an update - it is the initial load
+              */
+              if (
+                (isAnUpdate && !isChangingSavedView) ||
+                path !== oldPath ||
+                !isAnUpdate
+              ) {
+                contextRef.current.history.replace(path, {
+                  state,
+                  colorscale,
+                  config,
+                  refresh: payload.refresh,
+                  variables: dataset ? { view: state.view || null } : undefined,
+                });
+              }
 
               break;
             }

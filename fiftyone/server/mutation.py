@@ -39,6 +39,8 @@ class ViewResponse:
     view: BSONArray
     dataset: Dataset
     view_name: t.Optional[str] = None
+    saved_view_slug: t.Optional[str] = None
+    changing_saved_view: t.Optional[bool] = False
 
 
 @gql.input
@@ -146,6 +148,8 @@ class Mutation:
         dataset_name: str,
         view: t.Optional[BSONArray],
         view_name: t.Optional[str],
+        saved_view_slug: t.Optional[str],
+        changing_saved_view: t.Optional[bool],
         form: t.Optional[StateForm],
         info: Info,
     ) -> ViewResponse:
@@ -156,6 +160,8 @@ class Mutation:
         if view_name is not None and state.dataset.has_saved_view(view_name):
             # Load a saved view by name
             state.view = state.dataset.load_saved_view(view_name)
+            # TODO: TALK TO KACEY
+            state.saved_views = state.dataset.all_views_v2
 
         elif form:
             # Update current view with form parameters
@@ -185,7 +191,16 @@ class Mutation:
             # Apply a list of view stages to dataset if provided
             state.view = fov.DatasetView._build(state.dataset, view)
 
-        await dispatch_event(subscription, StateUpdate(state=state))
+        state.saved_view_slug = saved_view_slug or None
+        await dispatch_event(
+            subscription,
+            StateUpdate(
+                state=state,
+                update=True,
+                changing_saved_view=changing_saved_view,
+            ),
+        )
+
         dataset = await Dataset.resolver(
             name=dataset_name,
             view=view,
@@ -200,6 +215,8 @@ class Mutation:
             view=state.view._serialize(),
             dataset=dataset,
             view_name=state.view.name,
+            saved_view_slug=saved_view_slug,
+            changing_saved_view=changing_saved_view,
         )
 
     @gql.mutation

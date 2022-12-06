@@ -148,13 +148,13 @@ def get_saved_views(
         )
         for view in agg
     ]
-    if data_loader:
-        data_loader.prime_many(
-            {saved_view.name: saved_view for saved_view in saved_views}
-        )
-        data_loader.prime_many(
-            {saved_view.name: saved_view for saved_view in saved_views}
-        )
+    # if data_loader:
+    #     data_loader.prime_many(
+    #         {saved_view.name: saved_view for saved_view in saved_views}
+    #     )
+    #     data_loader.prime_many(
+    #         {saved_view.name: saved_view for saved_view in saved_views}
+    #     )
     return saved_views
 
 

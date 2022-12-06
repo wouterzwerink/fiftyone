@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { filter, map } from "lodash";
 import {
   atom,
@@ -18,6 +18,14 @@ import {
 } from "../../../Root/Root";
 import { Box, LastOption, AddIcon, TextContainer } from "./styledComponents";
 
+const DEFAULT_SELECTED: DatasetViewOption = {
+  id: "1",
+  label: "Unsaved view",
+  color: "#9e9e9e",
+  description: "Unsaved view",
+  slug: "unsaved-view",
+};
+
 export const viewSearchTerm = atom<string>({
   key: "viewSearchTerm",
   default: "",
@@ -31,14 +39,6 @@ export type DatasetViewOption = Pick<
   fos.State.SavedView,
   "id" | "description" | "color"
 > & { label: string; slug: string };
-
-const DEFAULT_SELECTED: DatasetViewOption = {
-  id: "1",
-  label: "Unsaved view",
-  color: "#9e9e9e",
-  description: "Unsaved view",
-  slug: "unsaved-view",
-};
 
 export interface DatasetView {
   id: string;
@@ -63,6 +63,9 @@ export default function ViewSelection(props: Props) {
   const setEditView = useSetRecoilState(viewDialogContent);
   const setView = fos.useSetView();
   const [viewSearch, setViewSearch] = useRecoilState<string>(viewSearchTerm);
+
+  // this comes as an update - can be improved
+  // const { savedViews: updateSavedViews = [] } = fos.useSavedViews();
 
   const fragments = usePreloadedQuery(DatasetSavedViewsQuery, queryRef);
   const [data, refetch] = useRefetchableFragment(
@@ -93,7 +96,7 @@ export default function ViewSelection(props: Props) {
       filter(
         viewOptions,
         ({ id, label, description, slug }: DatasetViewOption) =>
-          id === "1" ||
+          id === DEFAULT_SELECTED.id ||
           label.toLowerCase().includes(viewSearch) ||
           description?.toLowerCase().includes(viewSearch) ||
           slug?.toLowerCase().includes(viewSearch)
@@ -107,41 +110,75 @@ export default function ViewSelection(props: Props) {
   const [selected, setSelected] = useState<DatasetViewOption | null>(
     selectedView
   );
-  const [isExtendingSavedView, setIsExtendingSavedView] =
-    useState<boolean>(false);
 
   useEffect(() => {
-    if (!loadedView?.length && selected?.id !== DEFAULT_SELECTED.id) {
-      setSelected(null);
-    } else if (savedViewParam) {
+    if (savedViewParam) {
       const potentialView = viewOptions.filter(
         (v) => v.slug === savedViewParam
       )?.[0];
       if (potentialView) {
         setSelected(potentialView);
+        setView(loadedView, [], potentialView.label, true, potentialView.slug);
       } else {
-        setSelected(null);
-      }
-    }
-  }, [viewOptions, savedViewParam, loadedView]);
-
-  useEffect(() => {
-    if (selected) {
-      if (selected.id === DEFAULT_SELECTED.id) {
-        return;
-      } else if (
-        (savedViewParam && selected.id !== DEFAULT_SELECTED.id) ||
-        savedViewParam !== selected.slug
-      ) {
-        setView([], [], selected.label, true, selected.slug);
+        // check the saved views coming as subscription update
+        const potentialUpdatedView = updateSavedViews.filter(
+          (v) => v.slug === savedViewParam
+        )?.[0];
+        if (potentialUpdatedView) {
+          console.log("here");
+          // refetch(
+          //   { name: datasetName },
+          //   {
+          //     fetchPolicy: "network-only",
+          //     onComplete: () => {
+          //       setSelected({
+          //         ...potentialUpdatedView,
+          //         label: potentialUpdatedView.name,
+          //         slug: potentialUpdatedView.slug,
+          //       });
+          //       setView(
+          //         [],
+          //         [],
+          //         potentialUpdatedView.name,
+          //         true,
+          //         potentialUpdatedView.slug
+          //       );
+          //     },
+          //   }
+          // );
+        } else {
+          // bad/old view param
+          setSelected(DEFAULT_SELECTED);
+          setView(loadedView, [], "", false, "");
+        }
       }
     } else {
-      if (selected === null && savedViewParam) {
-        setView([], [], "", true, "");
+      // no view param
+      if (selected && selected.slug !== DEFAULT_SELECTED.slug) {
         setSelected(DEFAULT_SELECTED);
+        setView(loadedView, [], "", false, "");
       }
     }
-  }, [selected]);
+  }, [savedViewParam]);
+
+  // cmds opens the create new saved view modal
+  useEffect(() => {
+    if (!isEmptyView) {
+      const callback = (event: KeyboardEvent) => {
+        if ((event.metaKey || event.ctrlKey) && event.code === "KeyS") {
+          event.preventDefault();
+          if (!isEmptyView) {
+            setIsOpen(true);
+          }
+        }
+      };
+
+      document.addEventListener("keydown", callback);
+      return () => {
+        document.removeEventListener("keydown", callback);
+      };
+    }
+  }, [isEmptyView]);
 
   return (
     <Box>
@@ -161,16 +198,22 @@ export default function ViewSelection(props: Props) {
           );
         }}
         onDeleteSuccess={(name: string) => {
-          refetch({ name: datasetName }, { fetchPolicy: "network-only" });
-          if (selected && name !== selected.label) {
-            setView([], [], "", true, "");
-          }
+          refetch(
+            { name: datasetName },
+            {
+              fetchPolicy: "network-only",
+              onComplete: () => {
+                setSavedViewParam(null);
+              },
+            }
+          );
         }}
       />
       <Selection
         selected={selected}
         setSelected={(item: DatasetViewOption) => {
           setSelected(item);
+          setView([], [], item.label, true, item.slug);
         }}
         items={searchData}
         onEdit={(item) => {
