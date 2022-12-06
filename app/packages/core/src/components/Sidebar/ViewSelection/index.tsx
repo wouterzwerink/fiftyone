@@ -37,7 +37,7 @@ export const viewDialogOpen = atom<boolean>({
 
 export type DatasetViewOption = Pick<
   fos.State.SavedView,
-  "id" | "description" | "color"
+  "id" | "description" | "color" | "viewStages"
 > & { label: string; slug: string };
 
 export interface DatasetView {
@@ -65,7 +65,7 @@ export default function ViewSelection(props: Props) {
   const [viewSearch, setViewSearch] = useRecoilState<string>(viewSearchTerm);
 
   // this comes as an update - can be improved
-  // const { savedViews: updateSavedViews = [] } = fos.useSavedViews();
+  const { savedViews: updateSavedViews = [] } = fos.useSavedViews();
 
   const fragments = usePreloadedQuery(DatasetSavedViewsQuery, queryRef);
   const [data, refetch] = useRefetchableFragment(
@@ -126,26 +126,26 @@ export default function ViewSelection(props: Props) {
         )?.[0];
         if (potentialUpdatedView) {
           console.log("here");
-          // refetch(
-          //   { name: datasetName },
-          //   {
-          //     fetchPolicy: "network-only",
-          //     onComplete: () => {
-          //       setSelected({
-          //         ...potentialUpdatedView,
-          //         label: potentialUpdatedView.name,
-          //         slug: potentialUpdatedView.slug,
-          //       });
-          //       setView(
-          //         [],
-          //         [],
-          //         potentialUpdatedView.name,
-          //         true,
-          //         potentialUpdatedView.slug
-          //       );
-          //     },
-          //   }
-          // );
+          refetch(
+            { name: datasetName },
+            {
+              fetchPolicy: "network-only",
+              onComplete: () => {
+                setSelected({
+                  ...potentialUpdatedView,
+                  label: potentialUpdatedView.name,
+                  slug: potentialUpdatedView.slug,
+                });
+                setView(
+                  [],
+                  [],
+                  potentialUpdatedView.name,
+                  true,
+                  potentialUpdatedView.slug
+                );
+              },
+            }
+          );
         } else {
           // bad/old view param
           setSelected(DEFAULT_SELECTED);
