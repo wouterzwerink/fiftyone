@@ -2,6 +2,7 @@
  * Copyright 2017-2022, Voxel51, Inc.
  */
 import { Copy as CopyIcon, Close as CloseIcon } from "@fiftyone/components";
+import ReactJson from "react-json-view";
 import {
   lookerPanel,
   lookerPanelContainer,
@@ -13,7 +14,17 @@ import {
   lookerJSONPanel,
 } from "./json.module.css";
 
-export default function JSONPanel({ containerRef, jsonHTML, onClose, onCopy }) {
+export default function JSONPanel({
+  containerRef,
+  jsonHTML,
+  onClose,
+  onCopy,
+  json,
+  sample,
+}) {
+  console.log("HERE is the JSON HTML", jsonHTML);
+  console.log("HERE is the JSON", json);
+  console.log("HERE is the JSON sample", sample);
   return (
     <div
       ref={containerRef}
@@ -22,7 +33,13 @@ export default function JSONPanel({ containerRef, jsonHTML, onClose, onCopy }) {
     >
       <div className={lookerPanelVerticalContainer}>
         <div className={lookerPanel}>
-          {jsonHTML && <pre dangerouslySetInnerHTML={jsonHTML} />}
+          {/* {jsonHTML && <pre dangerouslySetInnerHTML={jsonHTML} />} */}
+          <ReactJson
+            src={sample}
+            collapsed={false}
+            theme={"brewer"}
+            collapseStringsAfterLength={30}
+          />
         </div>
         <CloseIcon
           className={lookerCloseJSON}

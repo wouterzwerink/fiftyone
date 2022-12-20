@@ -26,3 +26,7 @@ dist/
 coverage.xml
 .coverage.*
 pyvenv.cfg
+
+caltech101/
+quickstart-geo/
+quickstart/

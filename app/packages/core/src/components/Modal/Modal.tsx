@@ -42,7 +42,7 @@ const ContentColumn = styled.div`
   display: flex;
   flex-direction: column;
 `;
-
+console.log("TEST TEST TEST TEST TEST");
 const SampleModal = () => {
   const labelPaths = useRecoilValue(fos.labelPaths({ expanded: false }));
   const clearModal = fos.useClearModal();
@@ -185,7 +185,7 @@ const SampleModal = () => {
   const isGroup = useRecoilValue(fos.isGroup);
   const jsonPanel = fos.useJSONPanel();
   const helpPanel = fos.useHelpPanel();
-
+  console.log("HERE IS THE JSON PANEL OBJECT", jsonPanel);
   return ReactDOM.createPortal(
     <Fragment>
       <ModalWrapper
@@ -200,6 +200,8 @@ const SampleModal = () => {
                 <JSONPanel
                   containerRef={jsonPanel.containerRef}
                   jsonHTML={jsonPanel.jsonHTML}
+                  sample={jsonPanel.sample}
+                  json={jsonPanel.json}
                   onClose={() => jsonPanel.close()}
                   onCopy={() => jsonPanel.copy()}
                 />

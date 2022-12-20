@@ -20,6 +20,8 @@ export default function useJSONPanel() {
   );
 
   const { sample, isOpen } = state || {};
+
+  console.log("HERE IS A 'SAMPLE' JSON", sample);
   const json = useMemo(
     () => (sample ? JSON.stringify(sample, null, 2) : null),
     [sample]

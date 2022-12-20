@@ -144,6 +144,12 @@ const Looker = ({ lookerRef, onClose, onNext, onPrevious }: LookerProps) => {
     "panels",
     async ({ detail: { showJSON, showHelp, SHORTCUTS } }) => {
       if (showJSON) {
+        console.log(
+          "showJSON called +++",
+          jsonPanel,
+          showJSON,
+          jsonPanel[showJSON]
+        );
         jsonPanel[showJSON](sample);
       }
       if (showHelp) {
