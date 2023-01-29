@@ -6304,27 +6304,40 @@ class SortBySimilarity(ViewStage):
             :meth:`fiftyone.brain.compute_similarity` run on the dataset. If
             not specified, the dataset must have an applicable run, which will
             be used by default
+         query_embeddings (None): pre-computed embeddings to use. Can be any
+            of the following:
+            - a ``num_dims`` array for a single embedding
+            - a ``num_queries x num_dims`` array of embeddings
     """
 
     def __init__(
         self,
-        query_ids,
+        query_ids=None,
         k=None,
         reverse=False,
         dist_field=None,
         brain_key=None,
+        query_embeddings=None,
         _state=None,
     ):
-        if etau.is_str(query_ids):
-            query_ids = [query_ids]
-        else:
-            query_ids = list(query_ids)
+        if query_ids:
+            if etau.is_str(query_ids):
+                query_ids = [query_ids]
+            else:
+                query_ids = list(query_ids)
+
+        if etau.is_container(query_embeddings) and len(query_embeddings) > 0:
+            if etau.is_container(query_embeddings[0]):
+                query_embeddings = np.array(query_embeddings)
+            else:
+                query_embeddings = np.array([query_embeddings])
 
         self._query_ids = query_ids
         self._k = k
         self._reverse = reverse
         self._dist_field = dist_field
         self._brain_key = brain_key
+        self._query_embeddings = query_embeddings
         self._state = _state
         self._pipeline = None
 
@@ -6355,6 +6368,11 @@ class SortBySimilarity(ViewStage):
         """
         return self._brain_key
 
+    @property
+    def query_embeddings(self):
+        """The list of query embeddings."""
+        return self._query_embeddings
+
     def to_mongo(self, _):
         if self._pipeline is None:
             raise ValueError(
@@ -6371,6 +6389,7 @@ class SortBySimilarity(ViewStage):
             ["reverse", self._reverse],
             ["dist_field", self._dist_field],
             ["brain_key", self._brain_key],
+            ["query_embeddings", self._query_embeddings],
             ["_state", self._state],
         ]
 
@@ -6379,8 +6398,8 @@ class SortBySimilarity(ViewStage):
         return [
             {
                 "name": "query_ids",
-                "type": "list<id>|id",
-                "placeholder": "list,of,ids",
+                "type": "NoneType|ids",
+                "placeholder": "ids (default=None)",
             },
             {
                 "name": "k",
@@ -6406,6 +6425,11 @@ class SortBySimilarity(ViewStage):
                 "default": "None",
                 "placeholder": "brain key",
             },
+            {
+                "name": "query_embeddings",
+                "type": "NoneType|field|float",
+                "placeholder": "query_embeddings (default=None)",
+            },
             {"name": "_state", "type": "NoneType|json", "default": "None"},
         ]
 
@@ -6418,6 +6442,7 @@ class SortBySimilarity(ViewStage):
             "reverse": self._reverse,
             "dist_field": self._dist_field,
             "brain_key": self._brain_key,
+            "query_embeddings": self._query_embeddings,
         }
 
         last_state = deepcopy(self._state)
@@ -6448,11 +6473,12 @@ class SortBySimilarity(ViewStage):
                 context.enter_context(results)  # pylint: disable=no-member
 
             return results.sort_by_similarity(
-                self._query_ids,
+                query_ids=self._query_ids,
                 k=self._k,
                 reverse=self._reverse,
                 dist_field=self._dist_field,
                 _mongo=True,
+                query_embeddings=self._query_embeddings,
             )
 
 

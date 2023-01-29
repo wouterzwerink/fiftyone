@@ -5838,12 +5838,18 @@ class SampleCollection(object):
 
     @view_stage
     def sort_by_similarity(
-        self, query_ids, k=None, reverse=False, dist_field=None, brain_key=None
+        self,
+        query_ids=None,
+        k=None,
+        reverse=False,
+        dist_field=None,
+        brain_key=None,
+        query_embeddings=None,
     ):
         """Sorts the samples in the collection by visual similiarity to a
-        specified set of query ID(s).
+        specified set of query ID(s) or query embeddings.
 
-        In order to use this stage, you must first use
+        In order to use this stage with query ID(s), you must first use
         :meth:`fiftyone.brain.compute_similarity` to index your dataset by
         visual similiarity.
 
@@ -5878,17 +5884,22 @@ class SampleCollection(object):
                 :meth:`fiftyone.brain.compute_similarity` run on the dataset.
                 If not specified, the dataset must have an applicable run,
                 which will be used by default
+            query_embeddings (None): pre-computed embeddings to use. Can be any
+                of the following:
+                - a ``num_dims`` array for a single embedding
+                - a ``num_queries x num_dims`` array of embeddings
 
         Returns:
             a :class:`fiftyone.core.view.DatasetView`
         """
         return self._add_view_stage(
             fos.SortBySimilarity(
-                query_ids,
+                query_ids=query_ids,
                 k=k,
                 reverse=reverse,
                 dist_field=dist_field,
                 brain_key=brain_key,
+                query_embeddings=query_embeddings,
             )
         )
 
