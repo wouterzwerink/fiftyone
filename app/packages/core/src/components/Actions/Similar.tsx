@@ -9,7 +9,10 @@ import {
 } from "recoil";
 
 import { SORT_BY_SIMILARITY } from "../../utils/links";
-import { useUnprocessedStateUpdate } from "@fiftyone/state";
+import {
+  similarityParameters,
+  useUnprocessedStateUpdate,
+} from "@fiftyone/state";
 
 import Checkbox from "../Common/Checkbox";
 import Input from "../Common/Input";
@@ -68,19 +71,32 @@ const useSortBySimilarity = (close) => {
   return useRecoilCallback(
     ({ snapshot, set }) =>
       async (parameters: fos.State.SortBySimilarityParameters) => {
-        const queryIds = await getQueryIds(snapshot, parameters.brainKey);
+        console.log("parameters", parameters);
+        const queryIds = parameters.query
+          ? null
+          : await getQueryIds(snapshot, parameters.brainKey);
         const view = await snapshot.getPromise(fos.view);
         set(fos.similaritySorting, true);
+
+        const { query, ...commonParams } = parameters;
+
+        const combinedParameters = {
+          ...commonParams,
+        };
+        if (query) {
+          combinedParameters.query = [query];
+        } else {
+          combinedParameters.queryIds = queryIds;
+        }
+
+        console.log("combinedParameters", combinedParameters);
 
         try {
           const data = await getFetchFunction()("POST", "/sort", {
             dataset: await snapshot.getPromise(fos.datasetName),
             view,
             filters: await snapshot.getPromise(fos.filters),
-            extended: toSnakeCase({
-              ...parameters,
-              queryIds,
-            }),
+            extended: toSnakeCase(combinedParameters),
           });
 
           // update selectedSamples atom to new set.
@@ -96,8 +112,20 @@ const useSortBySimilarity = (close) => {
             set(fos.similaritySorting, false);
             close();
 
-            return data;
-          });
+          set(fos.similarityParameters, combinedParameters);
+
+          close();
+          // update(({ set }) => {
+          //   console.log('setting...', {similarityParameters})
+          //   set(fos.similarityParameters, combinedParameters);
+          //   set(fos.modal, null);
+          //   set(fos.similaritySorting, false);
+          //   close();
+
+          //   console.log(data)
+
+          //   return data;
+          // });
         } catch (error) {
           handleError(error);
         }
@@ -207,6 +235,10 @@ const SortBySimilarity = React.memo(
           : { brainKey: null, distField: null, reverse: false, k: null }
     );
 
+    const dataset = useRecoilValue(fos.dataset);
+
+    console.log(dataset);
+
     const setParameter = useCallback(
       (name: string, value) =>
         setState((state) => ({ ...state, [name]: value })),
@@ -236,6 +268,8 @@ const SortBySimilarity = React.memo(
       current && setState(current);
     }, [current]);
 
+    const showTextPrompt = true;
+
     return (
       <Popout modal={modal} bounds={bounds}>
         <PopoutSectionTitle>
@@ -254,6 +288,16 @@ const SortBySimilarity = React.memo(
         </PopoutSectionTitle>
         {hasSimilarityKeys && (
           <>
+            {showTextPrompt && (
+              <Input
+                placeholder={"Text search"}
+                validator={(value) => true}
+                value={state.query || ""}
+                setter={(value) => {
+                  setParameter("query", value);
+                }}
+              />
+            )}
             <Input
               placeholder={"k (default = None)"}
               validator={(value) => value === "" || /^[0-9\b]+$/.test(value)}
