@@ -71,10 +71,13 @@ const useSortBySimilarity = (close) => {
         const view = await snapshot.getPromise(fos.view);
         set(fos.similaritySorting, true);
 
+        const arr = Object.entries(toSnakeCase({...parameters, queryIds}))
+        const similarityStage = {"_cls": "fiftyone.core.stages.SortBySimilarity", "kwargs": arr}
+
         try {
           const data = await getFetchFunction()("POST", "/sort", {
             dataset: await snapshot.getPromise(fos.datasetName),
-            view,
+            view: [...view, similarityStage],
             filters: await snapshot.getPromise(fos.filters),
             extended: toSnakeCase({
               ...parameters,
