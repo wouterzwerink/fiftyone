@@ -154,6 +154,8 @@ export interface VideoConfig extends BaseConfig {
   support?: [number, number];
 }
 
+export interface PcdConfig extends BaseConfig {}
+
 export interface FrameOptions extends BaseOptions {
   useFrameNumber: boolean;
   zoom: boolean;
@@ -170,6 +172,8 @@ export interface VideoOptions extends BaseOptions {
   useFrameNumber: boolean;
   volume: number;
 }
+
+export interface PcdOptions extends BaseOptions {}
 
 export interface TooltipOverlay {
   color: string;
@@ -255,6 +259,12 @@ export interface VideoState extends BaseState {
   lockedToSupport: boolean;
 }
 
+export interface PcdState extends BaseState {
+  config: PcdConfig;
+  options: PcdOptions;
+  SHORTCUTS: Readonly<ControlMap<PcdState>>;
+}
+
 export type Optional<T> = {
   [P in keyof T]?: Optional<T[P]>;
 };
@@ -335,6 +345,10 @@ export const DEFAULT_VIDEO_OPTIONS: VideoOptions = {
   playbackRate: 1,
   useFrameNumber: false,
   volume: 0,
+};
+
+export const DEFAULT_PCD_OPTIONS: PcdOptions = {
+  ...DEFAULT_BASE_OPTIONS,
 };
 
 export interface FrameSample {

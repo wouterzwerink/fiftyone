@@ -1,4 +1,9 @@
-import { FrameLooker, ImageLooker, VideoLooker } from "@fiftyone/looker";
+import {
+  FrameLooker,
+  ImageLooker,
+  PcdLooker,
+  VideoLooker,
+} from "@fiftyone/looker";
 import {
   EMBEDDED_DOCUMENT_FIELD,
   getMimeType,
@@ -11,7 +16,7 @@ import { mainGroupSample, selectedMediaField } from "../recoil";
 
 import { SampleData, selectedSamples } from "../recoil/atoms";
 import * as schemaAtoms from "../recoil/schema";
-import { datasetName } from "../recoil/selectors";
+import { datasetName, mediaTypeSelector } from "../recoil/selectors";
 import { State } from "../recoil/types";
 import { getSampleSrc } from "../recoil/utils";
 import * as viewAtoms from "../recoil/view";
@@ -32,6 +37,7 @@ export default <T extends FrameLooker | ImageLooker | VideoLooker>(
   const view = useRecoilValue(viewAtoms.view);
   const dataset = useRecoilValue(datasetName);
   const mediaField = useRecoilValue(selectedMediaField(isModal));
+  const mediaType = useRecoilValue(mediaTypeSelector);
 
   const fieldSchema = useRecoilValue(
     schemaAtoms.fieldSchema({ space: State.SPACE.SAMPLE })
@@ -45,6 +51,7 @@ export default <T extends FrameLooker | ImageLooker | VideoLooker>(
       let constructor:
         | typeof FrameLooker
         | typeof ImageLooker
+        | typeof PcdLooker
         | typeof VideoLooker = ImageLooker;
 
       const mimeType = getMimeType(sample);
@@ -60,8 +67,11 @@ export default <T extends FrameLooker | ImageLooker | VideoLooker>(
           constructor = VideoLooker;
         }
       } else {
-        // todo: check media type; constructor = PcdLooker if media_type is point-cloud
-        constructor = ImageLooker;
+        if (mediaType === "point_cloud") {
+          constructor = PcdLooker;
+        } else {
+          constructor = ImageLooker;
+        }
       }
 
       const config: ReturnType<T["getInitialState"]>["config"] = {

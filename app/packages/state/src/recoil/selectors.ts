@@ -42,7 +42,7 @@ export const stateSubscription = selector<string>({
   },
 });
 
-export const mediaType = selector({
+export const mediaTypeSelector = selector({
   key: "mediaType",
   get: ({ get }) => get(atoms.dataset)?.mediaType,
   cachePolicy_UNSTABLE: {
@@ -60,7 +60,7 @@ export const savedViewsSelector = selector<State.SavedView[]>({
 
 export const isVideoDataset = selector({
   key: "isVideoDataset",
-  get: ({ get }) => get(mediaType) === "video",
+  get: ({ get }) => get(mediaTypeSelector) === "video",
   cachePolicy_UNSTABLE: {
     eviction: "most-recent",
   },
