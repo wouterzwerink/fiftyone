@@ -9,6 +9,7 @@ import { useRecoilValue } from "recoil";
 import Sidebar, { Entries } from "../Sidebar";
 import Group from "./Group";
 import Sample from "./Sample";
+import Sample3d from "./Sample3d";
 import { ErrorBoundary, HelpPanel, JSONPanel } from "@fiftyone/components";
 
 const ModalWrapper = styled.div`
@@ -183,6 +184,7 @@ const SampleModal = () => {
     : { width: "95%", height: "90%", borderRadius: "3px" };
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isGroup = useRecoilValue(fos.isGroup);
+  const isPcd = useRecoilValue(fos.isPcdOnlyDataset);
   const jsonPanel = fos.useJSONPanel();
   const helpPanel = fos.useHelpPanel();
 
@@ -195,7 +197,7 @@ const SampleModal = () => {
         <Container style={{ ...screen, zIndex: 10001 }}>
           <ContentColumn>
             <ErrorBoundary onReset={() => {}}>
-              {isGroup ? <Group /> : <Sample />}
+              {isGroup ? <Group /> : isPcd ? <Sample3d /> : <Sample />}
               {jsonPanel.isOpen && (
                 <JSONPanel
                   containerRef={jsonPanel.containerRef}

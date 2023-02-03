@@ -1,0 +1,26 @@
+.MuiSlider-thumb {
+  box-shadow: none !important;
+}
+
+.point-size-text-field {
+  /* color: hsl(25, 100%, 51%) !important; */
+  color: white;
+}
+
+.Mui-focused {
+  color: hsl(25, 100%, 51%) !important;
+}
+
+.point-size-slider {
+  align-self: center;
+  margin-right: 30px;
+}
+
+.MuiFilledInput-input,
+.MuiInput-underline {
+  color: white !important;
+}
+
+.MuiInput-root:after {
+  border-bottom: none !important;
+}

@@ -2,17 +2,17 @@
  * Copyright 2017-2023, Voxel51, Inc.
  */
 
-import { PcdState } from "../state";
+import { PcdState, Sample } from "../state";
 import { BaseElement, Events } from "./base";
 
 export class PcdElement extends BaseElement<PcdState, HTMLImageElement> {
   private src: string = "";
-  private pcdSource: HTMLImageElement;
+  private imageSource: HTMLImageElement;
 
   getEvents(): Events<PcdState> {
     return {
       load: ({ update }) => {
-        this.pcdSource = this.element;
+        this.imageSource = this.element;
 
         update({
           loaded: true,

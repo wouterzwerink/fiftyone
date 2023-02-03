@@ -522,7 +522,6 @@ export abstract class AbstractLooker<
     if (!this.state.dimensions) {
       throw new Error("media not loaded");
     }
-
     let [tlx, tly, w, h] = this.state.windowBBox;
     this.state.pan = snapBox(
       this.state.scale,

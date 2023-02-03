@@ -216,5 +216,4 @@ function shortcutToHelpItems(SHORTCUTS) {
       return acc;
     }, {})
   );
-  return Object.values(SHORTCUTS);
 }

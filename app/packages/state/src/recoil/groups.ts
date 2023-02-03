@@ -31,6 +31,13 @@ export const isGroup = selector<boolean>({
   },
 });
 
+export const isPcdOnlyDataset = selector<boolean>({
+  key: "isPcdOnly",
+  get: ({ get }) => {
+    return get(dataset)?.mediaType === "point_cloud";
+  },
+});
+
 export const defaultGroupSlice = selector<string>({
   key: "defaultGroupSlice",
   get: ({ get }) => {

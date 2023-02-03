@@ -3,11 +3,41 @@ import { ARRAY_TYPES, OverlayMask, TypedArray } from "../numpy";
 import { isRgbMaskTargets } from "../overlays/util";
 import { Coloring, MaskTargets, RgbMaskTargets } from "../state";
 
-export const PainterFactory = {
+export const PainterFactory = (requestColor) => ({
   Detection: async (field, label, coloring: Coloring) => {
-    debugger;
-
     if (!label.mask) {
+      if (label.dimensions && label.location) {
+        const [x, y, z] = label.location.map((d) => Math.round(d));
+        const [lx, ly, lz] = label.dimensions.map((d) => Math.round(d));
+
+        const color = await requestColor(
+          coloring.pool,
+          coloring.seed,
+          coloring.by === "label"
+            ? label.label
+            : coloring.by === "field"
+            ? field
+            : label.id
+        );
+        const bitColor = get32BitColor(color);
+        const overlay = new Uint32Array(lx * ly);
+
+        for (let i = 0; i < ly; i++) {
+          for (let j = 0; j < lx; j++) {
+            overlay[i * lx + j] = bitColor;
+          }
+        }
+
+        label.mask = {
+          data: {
+            arrayType: "Uint8Array",
+            buffer: new Uint8Array(overlay.buffer),
+            channels: 1,
+            shape: [ly, lx],
+          },
+          image: overlay.buffer,
+        };
+      }
       return;
     }
 
@@ -36,7 +66,7 @@ export const PainterFactory = {
   },
   Detections: async (field, labels, coloring: Coloring) => {
     const promises = labels.detections.map((label) =>
-      PainterFactory[label._cls](field, label, coloring)
+      PainterFactory(requestColor)[label._cls](field, label, coloring)
     );
 
     await Promise.all(promises);
@@ -193,7 +223,7 @@ export const PainterFactory = {
       }
     }
   },
-};
+});
 
 const isFloatArray = (arr) =>
   arr instanceof Float32Array || arr instanceof Float64Array;

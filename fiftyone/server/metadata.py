@@ -53,9 +53,15 @@ async def get_metadata(
         metadata dict
     """
     filepath = sample["filepath"]
-    is_video = media_type == fom.VIDEO
     metadata = sample.get("metadata", None)
     urls = _create_media_urls(collection, sample, url_cache)
+
+    has_bev_path = media_type == fom.POINT_CLOUD and "proj_bounds" in sample
+
+    if has_bev_path:
+        bev_filepath = sample["proj_bounds"]
+
+    is_video = media_type == fom.VIDEO
 
     # If sufficient pre-existing metadata exists, use it
     if filepath not in metadata_cache and metadata:
@@ -65,11 +71,14 @@ async def get_metadata(
             frame_rate = metadata.get("frame_rate", None)
 
             if width and height and frame_rate:
-                metadata_cache[sample["filepath"]] = dict(
+                metadata_cache[filepath] = dict(
                     aspect_ratio=width / height,
                     frame_rate=frame_rate,
                 )
-
+        elif has_bev_path:
+            metadata_cache[filepath] = await read_metadata(
+                bev_filepath, is_video
+            )
         else:
             width = metadata.get("width", None)
             height = metadata.get("height", None)

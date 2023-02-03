@@ -66,13 +66,18 @@ export default <T extends FrameLooker | ImageLooker | VideoLooker>(
         if (isVideo) {
           constructor = VideoLooker;
         }
-      } else {
+
         if (mediaType === "point_cloud") {
           constructor = PcdLooker;
-        } else {
-          constructor = ImageLooker;
         }
+      } else {
+        constructor = ImageLooker;
       }
+
+      const sampleMediaFilePath =
+        constructor === PcdLooker && "proj_bounds" in sample
+          ? (sample["proj_bounds"] as string)
+          : urls[mediaField];
 
       const config: ReturnType<T["getInitialState"]>["config"] = {
         fieldSchema: {
@@ -89,7 +94,7 @@ export default <T extends FrameLooker | ImageLooker | VideoLooker>(
         frameNumber: constructor === FrameLooker ? frameNumber : undefined,
         frameRate,
         sampleId: sample._id,
-        src: getSampleSrc(urls[mediaField]),
+        src: getSampleSrc(sampleMediaFilePath),
         support: isClip ? sample.support : undefined,
         thumbnail,
         dataset,
