@@ -1,4 +1,6 @@
 import React, { useCallback, useLayoutEffect, useState } from "react";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+
 import {
   atom,
   selectorFamily,
@@ -17,7 +19,6 @@ import {
 import Checkbox from "../Common/Checkbox";
 import Input from "../Common/Input";
 import RadioGroup from "../Common/RadioGroup";
-import { Button } from "../utils";
 
 import { ActionOption } from "./Common";
 import Popout from "./Popout";
@@ -25,6 +26,7 @@ import { getFetchFunction, toSnakeCase } from "@fiftyone/utilities";
 import { useErrorHandler } from "react-error-boundary";
 import { useTheme, PopoutSectionTitle } from "@fiftyone/components";
 import * as fos from "@fiftyone/state";
+import { Button } from "../utils";
 
 const getQueryIds = async (snapshot: Snapshot, brainKey?: string) => {
   const selectedLabelIds = await snapshot.getPromise(fos.selectedLabelIds);
@@ -71,7 +73,6 @@ const useSortBySimilarity = (close) => {
   return useRecoilCallback(
     ({ snapshot, set }) =>
       async (parameters: fos.State.SortBySimilarityParameters) => {
-        console.log("parameters", parameters);
         const queryIds = parameters.query
           ? null
           : await getQueryIds(snapshot, parameters.brainKey);
@@ -83,13 +84,8 @@ const useSortBySimilarity = (close) => {
         const combinedParameters = {
           ...commonParams,
         };
-        if (query) {
-          combinedParameters.query = [query];
-        } else {
-          combinedParameters.queryIds = queryIds;
-        }
 
-        console.log("combinedParameters", combinedParameters);
+        combinedParameters["query"] = query ?? queryIds;
 
         try {
           const data = await getFetchFunction()("POST", "/sort", {
@@ -104,28 +100,13 @@ const useSortBySimilarity = (close) => {
           data.state.selected = [];
 
           update(({ set }) => {
-            set(fos.similarityParameters, {
-              ...parameters,
-              queryIds,
-            });
+            set(fos.similarityParameters, combinedParameters);
             set(fos.modal, null);
             set(fos.similaritySorting, false);
             close();
 
-          set(fos.similarityParameters, combinedParameters);
-
-          close();
-          // update(({ set }) => {
-          //   console.log('setting...', {similarityParameters})
-          //   set(fos.similarityParameters, combinedParameters);
-          //   set(fos.modal, null);
-          //   set(fos.similaritySorting, false);
-          //   close();
-
-          //   console.log(data)
-
-          //   return data;
-          // });
+            return data;
+          });
         } catch (error) {
           handleError(error);
         }
@@ -228,16 +209,14 @@ interface SortBySimilarityProps {
 const SortBySimilarity = React.memo(
   ({ modal, bounds, close }: SortBySimilarityProps) => {
     const current = useRecoilValue(fos.similarityParameters);
+    const selectedSamples = useRecoilValue(fos.selectedSamples);
+    const [open, setOpen] = useState(false);
     const [state, setState] = useState<fos.State.SortBySimilarityParameters>(
       () =>
         current
           ? current
-          : { brainKey: null, distField: null, reverse: false, k: null }
+          : { brainKey: null, distField: null, reverse: false, k: 10 }
     );
-
-    const dataset = useRecoilValue(fos.dataset);
-
-    console.log(dataset);
 
     const setParameter = useCallback(
       (name: string, value) =>
@@ -268,10 +247,11 @@ const SortBySimilarity = React.memo(
       current && setState(current);
     }, [current]);
 
-    const showTextPrompt = true;
+    const showTextPrompt = [...selectedSamples].length == 0;
+    const popoutStyle = open ? { minWidth: 350 } : {};
 
     return (
-      <Popout modal={modal} bounds={bounds}>
+      <Popout modal={modal} bounds={bounds} style={popoutStyle}>
         <PopoutSectionTitle>
           <ActionOption
             href={SORT_BY_SIMILARITY}
@@ -286,11 +266,24 @@ const SortBySimilarity = React.memo(
             svgStyles={{ height: "1rem", marginTop: 7.5 }}
           />
         </PopoutSectionTitle>
-        {hasSimilarityKeys && (
-          <>
+        <div
+          style={{
+            flexDirection: "row",
+            display: "flex",
+            justifyContent: "space-between",
+            width: "100%",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              flexDirection: "column",
+            }}
+          >
             {showTextPrompt && (
               <Input
-                placeholder={"Text search"}
+                placeholder={"Search by text"}
                 validator={(value) => true}
                 value={state.query || ""}
                 setter={(value) => {
@@ -298,53 +291,73 @@ const SortBySimilarity = React.memo(
                 }}
               />
             )}
-            <Input
-              placeholder={"k (default = None)"}
-              validator={(value) => value === "" || /^[0-9\b]+$/.test(value)}
-              value={state.k === null ? "" : String(state.k)}
-              setter={(value) => {
-                setParameter("k", value === "" ? null : Number(value));
+            <div
+              onClick={() => setOpen((s) => !s)}
+              style={{
+                flexDirection: "row",
+                display: "flex",
+                justifyContent: "space-between",
               }}
-            />
-            <Input
-              placeholder={"dist_field (default = None)"}
-              validator={(value) => !value.startsWith("_")}
-              value={state.distField === null ? "" : state.distField}
-              setter={(value) => {
-                setParameter("distField", value === "" ? null : value);
+            >
+              <p style={{ textDecoration: "underline" }}>See More</p>
+              <ChevronRightIcon
+                style={{
+                  margin: "auto 3px",
+                  transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              />
+            </div>
+          </div>
+          {open && hasSimilarityKeys && (
+            <div>
+              <Input
+                placeholder={"k (default = None)"}
+                validator={(value) => value === "" || /^[0-9\b]+$/.test(value)}
+                value={state.k === null ? "" : String(state.k)}
+                setter={(value) => {
+                  setParameter("k", value === "" ? null : Number(value));
+                }}
+              />
+              <Input
+                placeholder={"dist_field (default = None)"}
+                validator={(value) => !value.startsWith("_")}
+                value={state.distField === null ? "" : state.distField}
+                setter={(value) => {
+                  setParameter("distField", value === "" ? null : value);
+                }}
+              />
+              <Checkbox
+                name={"reverse"}
+                value={Boolean(state.reverse)}
+                setValue={(v) => setParameter("reverse", v)}
+              />
+              <PopoutSectionTitle style={{ fontSize: 14 }}>
+                Brain key
+              </PopoutSectionTitle>
+              <RadioGroup
+                choices={choices.choices}
+                value={state.brainKey}
+                setValue={(v) => setParameter("brainKey", v)}
+              />
+            </div>
+          )}
+        </div>
+        {state.brainKey && (
+          <>
+            <PopoutSectionTitle></PopoutSectionTitle>
+            <Button
+              text={"Apply"}
+              title={`Sort by similarity to the selected ${type}`}
+              onClick={() => {
+                sortBySimilarity(state);
               }}
-            />
-            <Checkbox
-              name={"reverse"}
-              value={Boolean(state.reverse)}
-              setValue={(v) => setParameter("reverse", v)}
-            />
-            <PopoutSectionTitle style={{ fontSize: 14 }}>
-              Brain key
-            </PopoutSectionTitle>
-            <RadioGroup
-              choices={choices.choices}
-              value={state.brainKey}
-              setValue={(v) => setParameter("brainKey", v)}
-            />
-            {state.brainKey && (
-              <>
-                <PopoutSectionTitle></PopoutSectionTitle>
-                <Button
-                  text={"Apply"}
-                  title={`Sort by similarity to the selected ${type}`}
-                  onClick={() => {
-                    sortBySimilarity(state);
-                  }}
-                  style={{
-                    margin: "0.25rem -0.5rem",
-                    height: "2rem",
-                    borderRadius: 0,
-                    textAlign: "center",
-                  }}
-                ></Button>
-              </>
-            )}
+              style={{
+                margin: "0.25rem -0.5rem",
+                height: "2rem",
+                borderRadius: 0,
+                textAlign: "center",
+              }}
+            ></Button>
           </>
         )}
         {hasSorting && (
