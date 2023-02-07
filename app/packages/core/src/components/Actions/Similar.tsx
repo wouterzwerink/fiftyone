@@ -1,5 +1,9 @@
 import React, { useCallback, useLayoutEffect, useState } from "react";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import SettingsIcon from "@mui/icons-material/Settings";
+import DoneIcon from "@mui/icons-material/Done";
+import SettingsBackupRestoreIcon from "@mui/icons-material/SettingsBackupRestore";
+import InfoIcon from "@mui/icons-material/Info";
+import SearchIcon from "@mui/icons-material/Search";
 
 import {
   atom,
@@ -24,9 +28,15 @@ import { ActionOption } from "./Common";
 import Popout from "./Popout";
 import { getFetchFunction, toSnakeCase } from "@fiftyone/utilities";
 import { useErrorHandler } from "react-error-boundary";
-import { useTheme, PopoutSectionTitle } from "@fiftyone/components";
+import {
+  useTheme,
+  PopoutSectionTitle,
+  IconButton,
+  Tooltip,
+} from "@fiftyone/components";
 import * as fos from "@fiftyone/state";
 import { Button } from "../utils";
+import styled from "styled-components";
 
 const getQueryIds = async (snapshot: Snapshot, brainKey?: string) => {
   const selectedLabelIds = await snapshot.getPromise(fos.selectedLabelIds);
@@ -200,6 +210,12 @@ const sortType = selectorFamily<string, boolean>({
     },
 });
 
+const ButtonGroup = styled.div`
+  display: flex;
+  flex-direction: row;
+  margin: auto 0;
+`;
+
 interface SortBySimilarityProps {
   modal: boolean;
   close: () => void;
@@ -248,29 +264,21 @@ const SortBySimilarity = React.memo(
     }, [current]);
 
     const showTextPrompt = [...selectedSamples].length == 0;
-    const popoutStyle = open ? { minWidth: 350 } : {};
+    const popoutStyle = { minWidth: 280 };
+
+    const refApply = React.useRef();
+    const refReset = React.useRef();
+    const refInfo = React.useRef();
+    const refSetting = React.useRef();
+
+    const onInfoLink = () => {
+      window.open(SORT_BY_SIMILARITY, "_system", "location=yes");
+    };
 
     return (
       <Popout modal={modal} bounds={bounds} style={popoutStyle}>
-        <PopoutSectionTitle>
-          <ActionOption
-            href={SORT_BY_SIMILARITY}
-            text={"Sort by similarity"}
-            title={"About sorting by similarity"}
-            style={{
-              background: "unset",
-              color: theme.text.primary,
-              paddingTop: 0,
-              paddingBottom: 0,
-            }}
-            svgStyles={{ height: "1rem", marginTop: 7.5 }}
-          />
-        </PopoutSectionTitle>
         <div
           style={{
-            flexDirection: "row",
-            display: "flex",
-            justifyContent: "space-between",
             width: "100%",
           }}
         >
@@ -278,7 +286,7 @@ const SortBySimilarity = React.memo(
             style={{
               display: "flex",
               justifyContent: "space-between",
-              flexDirection: "column",
+              flexDirection: "row",
             }}
           >
             {showTextPrompt && (
@@ -291,22 +299,70 @@ const SortBySimilarity = React.memo(
                 }}
               />
             )}
-            <div
-              onClick={() => setOpen((s) => !s)}
-              style={{
-                flexDirection: "row",
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <p style={{ textDecoration: "underline" }}>See More</p>
-              <ChevronRightIcon
-                style={{
-                  margin: "auto 3px",
-                  transform: open ? "rotate(180deg)" : "rotate(0deg)",
-                }}
-              />
-            </div>
+            <ButtonGroup>
+              {state.brainKey && (
+                <Tooltip
+                  text={`Sort by similarity to the selected ${type}`}
+                  placement={"top-center"}
+                >
+                  <div ref={refApply} onClick={() => sortBySimilarity(state)}>
+                    <IconButton
+                      aria-label="submit"
+                      size="small"
+                      disableRipple
+                      sx={{ color: "#2e7d32" }}
+                    >
+                      <SearchIcon />
+                    </IconButton>
+                  </div>
+                </Tooltip>
+              )}
+              {hasSorting && (
+                <Tooltip
+                  text="Clear similarity sorting"
+                  placement={"top-center"}
+                >
+                  <div
+                    ref={refReset}
+                    onClick={() => {
+                      close();
+                      reset();
+                    }}
+                  >
+                    <IconButton
+                      aria-label="reset"
+                      size="small"
+                      disableRipple
+                      sx={{ color: "#0288d1" }}
+                    >
+                      <SettingsBackupRestoreIcon />
+                    </IconButton>
+                  </div>
+                </Tooltip>
+              )}
+              <Tooltip
+                text="Learn more about sorting by similarity"
+                placement={"top-center"}
+              >
+                <div ref={refInfo} onClick={() => onInfoLink()}>
+                  <IconButton
+                    aria-label="information"
+                    size="small"
+                    disableRipple
+                    sx={{ color: "#0288d1" }}
+                  >
+                    <InfoIcon />
+                  </IconButton>
+                </div>
+              </Tooltip>
+              <Tooltip text="Advanced Settings" placement={"top-center"}>
+                <div ref={refSetting} onClick={() => setOpen((o) => !o)}>
+                  <IconButton aria-label="Advanced Setting" size="small">
+                    <SettingsIcon />
+                  </IconButton>
+                </div>
+              </Tooltip>
+            </ButtonGroup>
           </div>
           {open && hasSimilarityKeys && (
             <div>
@@ -342,43 +398,6 @@ const SortBySimilarity = React.memo(
             </div>
           )}
         </div>
-        {state.brainKey && (
-          <>
-            <PopoutSectionTitle></PopoutSectionTitle>
-            <Button
-              text={"Apply"}
-              title={`Sort by similarity to the selected ${type}`}
-              onClick={() => {
-                sortBySimilarity(state);
-              }}
-              style={{
-                margin: "0.25rem -0.5rem",
-                height: "2rem",
-                borderRadius: 0,
-                textAlign: "center",
-              }}
-            ></Button>
-          </>
-        )}
-        {hasSorting && (
-          <>
-            <PopoutSectionTitle></PopoutSectionTitle>
-            <Button
-              text={"Reset"}
-              title={`Clear sorting`}
-              onClick={() => {
-                close();
-                reset();
-              }}
-              style={{
-                margin: "0.25rem -0.5rem",
-                height: "2rem",
-                borderRadius: 0,
-                textAlign: "center",
-              }}
-            ></Button>
-          </>
-        )}
       </Popout>
     );
   }
