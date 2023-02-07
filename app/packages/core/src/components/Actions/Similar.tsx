@@ -364,37 +364,51 @@ const SortBySimilarity = React.memo(
               </Tooltip>
             </ButtonGroup>
           </div>
+
           {open && hasSimilarityKeys && (
             <div>
-              <Input
-                placeholder={"k (default = None)"}
-                validator={(value) => value === "" || /^[0-9\b]+$/.test(value)}
-                value={state.k === null ? "" : String(state.k)}
-                setter={(value) => {
-                  setParameter("k", value === "" ? null : Number(value));
-                }}
-              />
-              <Input
-                placeholder={"dist_field (default = None)"}
-                validator={(value) => !value.startsWith("_")}
-                value={state.distField === null ? "" : state.distField}
-                setter={(value) => {
-                  setParameter("distField", value === "" ? null : value);
-                }}
-              />
-              <Checkbox
-                name={"reverse"}
-                value={Boolean(state.reverse)}
-                setValue={(v) => setParameter("reverse", v)}
-              />
               <PopoutSectionTitle style={{ fontSize: 14 }}>
-                Brain key
+                Advanced Settings:
               </PopoutSectionTitle>
-              <RadioGroup
-                choices={choices.choices}
-                value={state.brainKey}
-                setValue={(v) => setParameter("brainKey", v)}
-              />
+              <div>
+                Find the{" "}
+                <div style={{ width: "20px", display: "inline-block" }}>
+                  <Input
+                    placeholder={"k"}
+                    validator={(value) =>
+                      value === "" || /^[0-9\b]+$/.test(value)
+                    }
+                    value={state.k === null ? "" : String(state.k)}
+                    setter={(value) => {
+                      setParameter("k", value === "" ? null : Number(value));
+                    }}
+                  />
+                </div>{" "}
+                most similar samples,{" "}
+                <Checkbox
+                  name={"in reverse order"}
+                  value={Boolean(state.reverse)}
+                  setValue={(v) => setParameter("reverse", v)}
+                />
+                with this brain key:
+                <RadioGroup
+                  choices={choices.choices}
+                  value={state.brainKey}
+                  setValue={(v) => setParameter("brainKey", v)}
+                />
+              </div>
+              Save the float field that stores the distance of each example to
+              the speicified query as:
+              <div style={{ width: "60%" }}>
+                <Input
+                  placeholder={"dist_field (default = None)"}
+                  validator={(value) => !value.startsWith("_")}
+                  value={state.distField === null ? "" : state.distField}
+                  setter={(value) => {
+                    setParameter("distField", value === "" ? null : value);
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>
