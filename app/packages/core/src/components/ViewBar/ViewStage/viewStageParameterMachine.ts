@@ -108,11 +108,11 @@ export const PARSER = {
     },
   },
   "list<field>": {
-    castFrom: (value) => value.join(","),
-    castTo: (value) => value.split(","),
-    parse: (value) => value.replace(/[\s\'\"\[\]]/g, ""),
+    castFrom: (value) => value?.join(","),
+    castTo: (value) => value?.split(","),
+    parse: (value) => value?.replace(/[\s\'\"\[\]]/g, ""),
     validate: (value, fields) => {
-      const stripped = value.replace(/[\s]/g, "");
+      const stripped = value?.replace(/[\s]/g, "");
       let array = null;
       try {
         array = JSON.parse(stripped);
@@ -126,11 +126,11 @@ export const PARSER = {
     },
   },
   "list<id>": {
-    castFrom: (value) => value.join(","),
-    castTo: (value) => value.split(","),
-    parse: (value) => value.replace(/[\s\'\"\[\]]/g, ""),
+    castFrom: (value) => value?.join(","),
+    castTo: (value) => value?.split(","),
+    parse: (value) => value?.replace(/[\s\'\"\[\]]/g, ""),
     validate: (value) => {
-      const stripped = value.replace(/[\s]/g, "");
+      const stripped = value?.replace(/[\s]/g, "");
       let array = null;
       try {
         array = JSON.parse(stripped);
@@ -141,11 +141,11 @@ export const PARSER = {
     },
   },
   "list<str>": {
-    castFrom: (value) => value.join(","),
-    castTo: (value) => value.split(","),
-    parse: (value) => value.replace(/[\s\'\"\[\]]/g, ""),
+    castFrom: (value) => value?.join(","),
+    castTo: (value) => value?.split(","),
+    parse: (value) => value?.replace(/[\s\'\"\[\]]/g, ""),
     validate: (value) => {
-      const stripped = value.replace(/[\s]/g, "");
+      const stripped = value?.replace(/[\s]/g, "");
       let array = null;
       try {
         array = JSON.parse(stripped);
