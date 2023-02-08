@@ -15,10 +15,12 @@ import {
 } from "@fiftyone/utilities";
 import { decode as decodePng } from "fast-png";
 import { CHUNK_SIZE } from "../constants";
-import { OverlayMask, TypedArray } from "../numpy";
-import { Coloring, FrameChunk } from "../state";
+import { OverlayMask } from "../numpy";
+import { Coloring, FrameChunk, FrameSample, Sample } from "../state";
 import { DeserializerFactory } from "./deserializer";
 import { PainterFactory } from "./painter";
+import { mapId } from "./shared";
+import { process3DLabels } from "./threeDLabelProcessor";
 
 interface ResolveColor {
   key: string | number;
@@ -77,14 +79,6 @@ const [requestColor, resolveColor] = ((): [
 })();
 
 const painterFactory = PainterFactory(requestColor);
-
-const mapId = (obj) => {
-  if (obj && obj._id !== undefined) {
-    obj.id = obj._id;
-    delete obj._id;
-  }
-  return obj;
-};
 
 const ALL_VALID_LABELS = new Set(VALID_LABEL_TYPES);
 
@@ -152,8 +146,8 @@ const imputeOverlayFromPath = async (
 };
 
 const processLabels = async (
-  sample: { [key: string]: any },
-  coloring: Coloring,
+  sample: ProcessSample["sample"],
+  coloring: ProcessSample["coloring"],
   prefix: string = ""
 ): Promise<ArrayBuffer[]> => {
   let buffers: ArrayBuffer[] = [];
@@ -207,21 +201,32 @@ interface ReaderMethod {
   method: string;
 }
 
-interface ProcessSample {
+export interface ProcessSample {
   uuid: string;
-  sample: {
-    [key: string]: object;
-    frames: any[];
-  };
+  sample: Sample & FrameSample;
   coloring: Coloring;
+  datasetDescriptors: {
+    isPointcloudDataset: boolean;
+  };
 }
 
 type ProcessSampleMethod = ReaderMethod & ProcessSample;
 
-const processSample = ({ sample, uuid, coloring }: ProcessSample) => {
+const processSample = ({
+  sample,
+  uuid,
+  coloring,
+  datasetDescriptors,
+}: ProcessSample) => {
   mapId(sample);
 
-  let bufferPromises = [processLabels(sample, coloring)];
+  let bufferPromises = [];
+
+  if (datasetDescriptors.isPointcloudDataset) {
+    process3DLabels(sample);
+  } else {
+    bufferPromises = [processLabels(sample, coloring)];
+  }
 
   if (sample.frames && sample.frames.length) {
     bufferPromises = [
@@ -404,20 +409,6 @@ const setStream = ({
   stream.reader.read().then(getSendChunk(uuid));
 };
 
-const isFloatArray = (arr) =>
-  arr instanceof Float32Array || arr instanceof Float64Array;
-
-const getRgbFromMaskData = (
-  maskTypedArray: TypedArray,
-  channels: number,
-  index: number
-) => {
-  const r = maskTypedArray[index * channels];
-  const g = maskTypedArray[index * channels + 1];
-  const b = maskTypedArray[index * channels + 2];
-
-  return [r, g, b] as [number, number, number];
-};
 interface Init {
   headers: HeadersInit;
   origin: string;

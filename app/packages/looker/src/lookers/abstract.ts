@@ -44,6 +44,7 @@ import {
 } from "../util";
 
 import { Events } from "../elements/base";
+import { ProcessSample } from "../worker";
 import { LookerUtils } from "./shared";
 
 const LABEL_LISTS_PATH = new Set(withPath(LABELS_PATH, LABEL_LISTS));
@@ -606,11 +607,14 @@ export abstract class AbstractLooker<
     labelsWorker.addEventListener("message", listener);
 
     labelsWorker.postMessage({
+      sample: sample as ProcessSample["sample"],
       method: "processSample",
       coloring: this.state.options.coloring,
-      sample,
       uuid: messageUUID,
-    });
+      datasetDescriptors: {
+        isPointcloudDataset: this.state.options.isPointcloudDataset,
+      },
+    } as ProcessSample);
   }
 }
 

@@ -56,10 +56,13 @@ async def get_metadata(
     metadata = sample.get("metadata", None)
     urls = _create_media_urls(collection, sample, url_cache)
 
-    has_bev_path = media_type == fom.POINT_CLOUD and "proj_bounds" in sample
+    has_bev_path = (
+        media_type == fom.POINT_CLOUD
+        and "orthographic_projection_path" in sample
+    )
 
     if has_bev_path:
-        bev_filepath = sample["proj_bounds"]
+        bev_filepath = sample["orthographic_projection_path"]
 
     is_video = media_type == fom.VIDEO
 

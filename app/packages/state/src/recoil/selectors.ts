@@ -66,6 +66,14 @@ export const isVideoDataset = selector({
   },
 });
 
+export const isPointcloudDataset = selector({
+  key: "isPointcloudDataset",
+  get: ({ get }) => get(mediaTypeSelector) === "point_cloud",
+  cachePolicy_UNSTABLE: {
+    eviction: "most-recent",
+  },
+});
+
 export const timeZone = selector<string>({
   key: "timeZone",
   get: ({ get }) => {

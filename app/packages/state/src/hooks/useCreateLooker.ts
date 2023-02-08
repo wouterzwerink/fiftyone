@@ -75,8 +75,8 @@ export default <T extends FrameLooker | ImageLooker | VideoLooker>(
       }
 
       const sampleMediaFilePath =
-        constructor === PcdLooker && "proj_bounds" in sample
-          ? (sample["proj_bounds"] as string)
+        constructor === PcdLooker && "orthographic_projection_path" in sample
+          ? (sample["orthographic_projection_path"] as string)
           : urls[mediaField];
 
       const config: ReturnType<T["getInitialState"]>["config"] = {

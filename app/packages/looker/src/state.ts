@@ -33,6 +33,21 @@ export interface Sample {
   tags: string[];
   _label_tags: string[];
   _media_type: "image" | "video" | "point-cloud";
+  /**
+   * path to orthographic projection image
+   */
+  orthographic_projection_path?: string;
+  /**
+   * [width, height, xmin, xmax, ymin, ymax]
+   */
+  orthographic_projection_params?: [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number
+  ];
 }
 
 export interface LabelData {
@@ -123,6 +138,7 @@ interface BaseOptions {
   defaultSkeleton?: KeypointSkeleton;
   skeletons: { [key: string]: KeypointSkeleton };
   showSkeletons: boolean;
+  isPointcloudDataset: boolean;
   pointFilter: (path: string, point: Point) => boolean;
   thumbnailTitle?: (sample: any) => string;
 }

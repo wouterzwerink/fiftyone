@@ -10,12 +10,18 @@ import { distanceFromLineSegment } from "../util";
 import { CONTAINS, CoordinateOverlay, PointInfo, RegularLabel } from "./base";
 import { t } from "./util";
 
-interface DetectionLabel extends RegularLabel {
+export interface DetectionLabel extends RegularLabel {
+  _cls: "Detection";
   mask?: {
     data: OverlayMask;
     image: ArrayBuffer;
   };
   bounding_box: BoundingBox;
+
+  // valid for 3D bounding boxes
+  dimensions?: [number, number, number];
+  location?: [number, number, number];
+  rotation?: [number, number, number];
 }
 
 export default class DetectionOverlay<
@@ -204,16 +210,40 @@ export default class DetectionOverlay<
     dash?: number
   ) {
     const [tlx, tly, w, h] = this.label.bounding_box;
+
+    const [boxCenterX, boxCenterY] = t(state, tlx + w / 2, tly + h / 2);
+
+    const hasRotationAroundZAxis =
+      this.label.rotation && this.label.rotation[2] !== 0;
+
+    if (hasRotationAroundZAxis) {
+      // translate to center of box before rotating
+      ctx.translate(boxCenterX, boxCenterY);
+      // modifies current transformation matrix so that all subsequent drawings are rotated
+      ctx.rotate(-this.label.rotation[2]); // THIS NEGATIVE ROTATION (-1) IS BAFFLING
+      // translate back to undo the translation into the center of the box
+      ctx.translate(-boxCenterX, -boxCenterY);
+    }
+
     ctx.beginPath();
+
     ctx.lineWidth = state.strokeWidth;
     ctx.strokeStyle = color;
     ctx.setLineDash(dash ? [dash] : []);
+
     ctx.moveTo(...t(state, tlx, tly));
     ctx.lineTo(...t(state, tlx + w, tly));
     ctx.lineTo(...t(state, tlx + w, tly + h));
     ctx.lineTo(...t(state, tlx, tly + h));
     ctx.closePath();
     ctx.stroke();
+
+    if (hasRotationAroundZAxis) {
+      // undo rotation to reset current transformation matrix
+      ctx.translate(boxCenterX, boxCenterY);
+      ctx.rotate(this.label.rotation[2]);
+      ctx.translate(-boxCenterX, -boxCenterY);
+    }
   }
 
   private getDrawnBBox(state: Readonly<State>): BoundingBox {
