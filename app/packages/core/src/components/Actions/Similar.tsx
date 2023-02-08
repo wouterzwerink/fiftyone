@@ -194,6 +194,7 @@ const currentSimilarityKeys = selectorFamily<
       const searchBrainKey = get(searchBrainKeyValue);
       const keys = get(availableSimilarityKeys(modal));
       const result = keys.filter((k) => k.includes(searchBrainKey)).sort();
+
       return {
         total: keys.length,
         choices: result.slice(0, 11),
@@ -231,6 +232,7 @@ interface SortBySimilarityProps {
 
 const SortBySimilarity = React.memo(
   ({ modal, bounds, close }: SortBySimilarityProps) => {
+    const dataset = useRecoilValue(fos.dataset);
     const current = useRecoilValue(fos.similarityParameters);
     const selectedSamples = useRecoilValue(fos.selectedSamples);
     const [open, setOpen] = useState(false);
@@ -288,9 +290,17 @@ const SortBySimilarity = React.memo(
       window.open(SORT_BY_SIMILARITY, "_system", "location=yes");
     };
 
+    const brainKeySupportsPromps = dataset.brainMethods.some(
+      (x) => x?.config?.supportsPrompts == true
+    );
+    const hasValidKeys =
+      hasSimilarityKeys && (isImageSearch || brainKeySupportsPromps);
+    const hasKeyButNotSupportTextPrompts =
+      state.brainKey && hasSimilarityKeys && !brainKeySupportsPromps;
+
     return (
       <Popout modal={modal} bounds={bounds} style={popoutStyle}>
-        {state.brainKey && (
+        {hasValidKeys && (
           <div
             style={{
               display: "flex",
@@ -310,7 +320,7 @@ const SortBySimilarity = React.memo(
                 onEnter={() => sortBySimilarity(state)}
               />
             )}
-            {isImageSearch && state.brainKey && !hasSorting && (
+            {isImageSearch && !hasSorting && (
               <Button
                 text={"Apply Sort"}
                 title={`Sort by similarity to the selected ${type}`}
@@ -344,7 +354,7 @@ const SortBySimilarity = React.memo(
               ></Button>
             )}
             <ButtonGroup>
-              {state.brainKey && !isImageSearch && !hasSorting && (
+              {!isImageSearch && !hasSorting && (
                 <Tooltip
                   text={`Sort by similarity to the selected ${type}`}
                   placement={"top-center"}
@@ -386,23 +396,31 @@ const SortBySimilarity = React.memo(
             </ButtonGroup>
           </div>
         )}
-        {!state.brainKey && (
-          <PopoutSectionTitle>
-            <ActionOption
-              href={SORT_BY_SIMILARITY}
-              text={"Sort by similarity"}
-              title={"About sorting by similarity"}
-              style={{
-                background: "unset",
-                color: theme.text.primary,
-                paddingTop: 0,
-                paddingBottom: 0,
-              }}
-              svgStyles={{ height: "1rem", marginTop: 7.5 }}
-            />
-          </PopoutSectionTitle>
-        )}
-        {open && hasSimilarityKeys && (
+        {!state.brainKey ||
+          (!isImageSearch && hasKeyButNotSupportTextPrompts && (
+            <>
+              {hasKeyButNotSupportTextPrompts && (
+                <PopoutSectionTitle style={{ fontSize: 12 }}>
+                  Brain methods do not support text prompts.
+                </PopoutSectionTitle>
+              )}
+              <PopoutSectionTitle>
+                <ActionOption
+                  href={SORT_BY_SIMILARITY}
+                  text={"Sort by similarity"}
+                  title={"About sorting by similarity"}
+                  style={{
+                    background: "unset",
+                    color: theme.text.primary,
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                  }}
+                  svgStyles={{ height: "1rem", marginTop: 7.5 }}
+                />
+              </PopoutSectionTitle>
+            </>
+          ))}
+        {open && hasValidKeys && (
           <div>
             <PopoutSectionTitle style={{ fontSize: 14 }}>
               Advanced Settings:
