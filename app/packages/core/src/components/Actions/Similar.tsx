@@ -5,7 +5,6 @@ import React, {
   useState,
 } from "react";
 import SettingsIcon from "@mui/icons-material/Settings";
-import SettingsBackupRestoreIcon from "@mui/icons-material/SettingsBackupRestore";
 import InfoIcon from "@mui/icons-material/Info";
 import SearchIcon from "@mui/icons-material/Search";
 import { useErrorHandler } from "react-error-boundary";
@@ -245,7 +244,6 @@ const SortBySimilarity = React.memo(
           : { brainKey: null, distField: null, reverse: false, k: 10 }
     );
     const hasNoSelectedSamples = [...selectedSamples].length == 0;
-
     const setParameter = useCallback(
       (name: string, value) =>
         setState((state) => ({ ...state, [name]: value })),
@@ -253,18 +251,21 @@ const SortBySimilarity = React.memo(
     );
 
     const hasSorting = Boolean(current);
+    const hasSimilarityKeys =
+      useRecoilValue(availableSimilarityKeys(modal)).length > 0;
+    const choices = useRecoilValue(currentSimilarityKeys(modal));
+    const sortBySimilarity = useSortBySimilarity(close);
+    const type = useRecoilValue(sortType(modal));
+
     const reset = useRecoilCallback(({ reset }) => () => {
       reset(fos.similarityParameters);
       reset(isImageSimilaritySearch);
     });
-    const hasSimilarityKeys =
-      useRecoilValue(availableSimilarityKeys(modal)).length > 0;
 
-    const choices = useRecoilValue(currentSimilarityKeys(modal));
-
-    const sortBySimilarity = useSortBySimilarity(close);
-    const type = useRecoilValue(sortType(modal));
     const theme = useTheme();
+    const refApply = React.useRef();
+    const refInfo = React.useRef();
+    const refSetting = React.useRef();
 
     useLayoutEffect(() => {
       choices.choices.length === 1 &&
@@ -282,11 +283,6 @@ const SortBySimilarity = React.memo(
     }, [hasNoSelectedSamples]);
 
     const popoutStyle = { minWidth: 280 };
-
-    const refApply = React.useRef();
-    const refReset = React.useRef();
-    const refInfo = React.useRef();
-    const refSetting = React.useRef();
 
     const onInfoLink = () => {
       window.open(SORT_BY_SIMILARITY, "_system", "location=yes");
@@ -330,7 +326,7 @@ const SortBySimilarity = React.memo(
                 }}
               ></Button>
             )}
-            {hasSorting && isImageSearch && (
+            {hasSorting && (
               <Button
                 text={"Reset"}
                 title={`Clear sorting`}
@@ -361,29 +357,6 @@ const SortBySimilarity = React.memo(
                       sx={{ color: "#2e7d32" }}
                     >
                       <SearchIcon />
-                    </IconButton>
-                  </div>
-                </Tooltip>
-              )}
-              {hasSorting && !isImageSearch && (
-                <Tooltip
-                  text="Clear similarity sorting"
-                  placement={"top-center"}
-                >
-                  <div
-                    ref={refReset}
-                    onClick={() => {
-                      close();
-                      reset();
-                    }}
-                  >
-                    <IconButton
-                      aria-label="reset"
-                      size="small"
-                      disableRipple
-                      sx={{ color: "#0288d1" }}
-                    >
-                      <SettingsBackupRestoreIcon />
                     </IconButton>
                   </div>
                 </Tooltip>
