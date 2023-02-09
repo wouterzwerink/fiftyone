@@ -618,7 +618,7 @@ _________________
 
 .. warning::
 
-    The Label Stuio integration does not currently support annotating videos.
+    The Label Studio integration does not currently support annotating videos.
 
 .. _label-studio-acknowledgements:
 
