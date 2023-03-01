@@ -159,6 +159,7 @@ interface CheckerProps {
   count: number;
   active: string;
   disabled: boolean;
+  selelectedValues: { [key: string]: number };
 }
 
 const Checker = ({
@@ -169,6 +170,7 @@ const Checker = ({
   active,
   setActive,
   disabled,
+  selelectedValues,
 }: CheckerProps) => {
   const sorted = Object.entries({ ...items, ...changes }).sort(([a], [b]) =>
     a < b ? -1 : 1
@@ -224,6 +226,11 @@ const Checker = ({
             ? null
             : items[name];
 
+        // console.log("name: ", name);
+        // console.log("value: ", value);
+        // console.log("items: ", items);
+        // console.log("changes: ", changes);
+        console.log("count: ", c);
         return (
           <Check
             {...{ name, count: c, active, disabled }}
@@ -231,8 +238,11 @@ const Checker = ({
             checkmark={
               name in changes
                 ? changes[name]
-                : count === items[name]
-                ? CheckState.ADD
+                : // : count === items[name]
+                selelectedValues?.[name] === items[name] &&
+                  count === items[name]
+                ? // : count === items[name] selelectedValues?.[name] === items[name] && count === items[name]
+                  CheckState.ADD
                 : 0 === items[name]
                 ? CheckState.REMOVE
                 : null

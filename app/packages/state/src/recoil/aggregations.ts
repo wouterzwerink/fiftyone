@@ -85,6 +85,7 @@ export const aggregation = selectorFamily({
       path: string;
     }) =>
     ({ get }) => {
+      console.log("aggregation", get(schemaAtoms.filterFields(path)));
       const result = get(
         aggregations({ ...params, paths: get(schemaAtoms.filterFields(path)) })
       ).filter((data) => data.path === path);
@@ -157,12 +158,17 @@ export const sampleTagCounts = selectorFamily<
   key: "sampleTagCounts",
   get:
     (params) =>
-    ({ get }) =>
-      Object.fromEntries(
+    ({ get }) => {
+      console.log(
+        "get(aggregation({ ... ))",
+        get(aggregation({ ...params, path: "tags" }))
+      );
+      return Object.fromEntries(
         get(aggregation({ ...params, path: "tags" })).values.map(
           ({ value, count }) => [value, count]
         )
-      ),
+      );
+    },
 });
 
 export const stringCountResults = selectorFamily({

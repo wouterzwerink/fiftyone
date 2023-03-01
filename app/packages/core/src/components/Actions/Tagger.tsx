@@ -40,6 +40,7 @@ import {
   tagParameters,
   tagStatistics,
   tagStats,
+  tagStatsV2,
 } from "./utils";
 
 const TaggingContainerInput = styled.div`
@@ -89,7 +90,16 @@ const Section = ({
   close,
   labels,
 }: SectionProps) => {
-  const items = useRecoilValue(itemsAtom);
+  const Allitems = useRecoilValue(itemsAtom);
+  console.log("Allitems", Allitems);
+  let items = {};
+  let selectedSamplesItems = {};
+  if (Allitems?.total) {
+    items = Allitems.total;
+    selectedSamplesItems = Allitems.self;
+  }
+  console.log("itemsitems", items);
+  console.log("itemsitems:selectedSamplesItems", selectedSamplesItems);
   const elementNames = useRecoilValue(fos.elementNames);
   const theme = useTheme();
   const [tagging, setTagging] = useRecoilState(taggingAtom);
@@ -133,6 +143,8 @@ const Section = ({
 
   const hasCreate = value.length > 0 && !(value in changes || value in items);
   const isLoading = Boolean(tagging || typeof count !== "number");
+
+  console.log("items", items);
 
   return (
     <>
@@ -208,6 +220,7 @@ const Section = ({
             }
             setChanges(newChanges);
           }}
+          selelectedValues={selectedSamplesItems}
         />
       )}
       {!disabled && (hasChanges || hasCreate) ? (
@@ -361,6 +374,7 @@ const useTagCallback = (
           current_frame: lookerRef?.current?.frameNumber,
           changes,
         });
+        console.log("samples", samples);
         set(refresher, (i) => i + 1);
 
         if (samples) {
@@ -416,14 +430,18 @@ const useSamplePlaceHolder = (
 ) => {
   return (): [number, string] => {
     const selectedSamples = useRecoilValue(fos.selectedSamples).size;
+    console.log("noplace-1", selectedSamples);
     const totalSamples = useRecoilValue(
       fos.count({ path: "", extended: false, modal })
     );
+    console.log("noplace-2", totalSamples);
     const filteredSamples = useRecoilValue(
       fos.count({ path: "", extended: true, modal })
     );
+    console.log("noplace-3", filteredSamples);
     const count = filteredSamples ?? totalSamples;
     const itemCount = useRecoilValue(selectedSamplesCount(modal));
+    console.log("noplace-4", itemCount);
     if (modal && !selectedSamples) {
       return [itemCount, samplesPlaceholder(count, elementNames)];
     } else {
@@ -508,7 +526,7 @@ const Tagger = ({ modal, bounds, close, lookerRef }: TaggerProps) => {
             countAndPlaceholder={samplePlaceholder}
             submit={submit}
             taggingAtom={fos.tagging({ modal, labels })}
-            itemsAtom={tagStats({ modal, labels })}
+            itemsAtom={tagStatsV2({ modal, labels })}
             close={close}
             labels={false}
           />

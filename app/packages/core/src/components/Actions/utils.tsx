@@ -137,9 +137,35 @@ export const tagStats = selectorFamily<
           : fos.sampleTagCounts({ modal: false, extended: false })
       );
 
+      console.log("data", data);
+      console.log("data 2", get(tagStatistics({ modal, labels })).tags);
       return {
         ...data,
         ...get(tagStatistics({ modal, labels })).tags,
+      };
+    },
+});
+
+export const tagStatsV2 = selectorFamily<
+  { [key: string]: number } | null,
+  { modal: boolean; labels: boolean }
+>({
+  key: "tagStats",
+  get:
+    ({ modal, labels }) =>
+    ({ get }) => {
+      const data = get(
+        labels
+          ? fos.labelTagCounts({ modal: false, extended: false })
+          : fos.sampleTagCounts({ modal: false, extended: false })
+      );
+
+      console.log("data", data);
+      console.log("data 2", get(tagStatistics({ modal, labels })).tags);
+      const selectedSamplesTags = get(tagStatistics({ modal, labels })).tags;
+      return {
+        total: { ...data, ...selectedSamplesTags },
+        self: selectedSamplesTags,
       };
     },
 });
