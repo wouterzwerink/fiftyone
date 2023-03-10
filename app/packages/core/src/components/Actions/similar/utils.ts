@@ -195,6 +195,16 @@ export const currentSimilarityKeys = selectorFamily<
     },
 });
 
+export const currentMaxK = selectorFamily<number | undefined, string>({
+  key: "currentMaxK",
+  get:
+    (key: string) =>
+    ({ get }) => {
+      const { samples: methods } = get(fos.similarityMethods);
+      return methods.find((method) => method.key === key)?.maxK;
+    },
+});
+
 export const sortType = selectorFamily<string, boolean>({
   key: "sortBySimilarityType",
   get:

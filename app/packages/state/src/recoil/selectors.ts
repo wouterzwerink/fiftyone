@@ -329,6 +329,7 @@ export const hiddenFieldLabels = selectorFamily<string[], string>({
 export type Method = {
   key: string;
   supportsPrompts: boolean;
+  maxK: number;
 };
 
 export const similarityMethods = selector<{
@@ -349,12 +350,12 @@ export const similarityMethods = selector<{
         (
           { patches, samples },
 
-          { config: { patchesField, supportsPrompts }, key }
+          { config: { patchesField, supportsPrompts }, key, maxK }
         ) => {
           if (patchesField) {
-            patches.push([{ key, supportsPrompts }, patchesField]);
+            patches.push([{ key, supportsPrompts, maxK }, patchesField]);
           } else {
-            samples.push({ key, supportsPrompts });
+            samples.push({ key, supportsPrompts, maxK });
           }
           return { patches, samples };
         },

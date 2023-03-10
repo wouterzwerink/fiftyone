@@ -15,6 +15,7 @@ import {
   currentSimilarityKeys,
   sortType,
   useSortBySimilarity,
+  currentMaxK,
 } from "./utils";
 
 const DEFAULT_K = 25;
@@ -66,6 +67,7 @@ const SortBySimilarity = ({
   const hasSimilarityKeys =
     useRecoilValue(availableSimilarityKeys({ modal, isImageSearch })).length >
     0;
+  const maxK = useRecoilValue(currentMaxK(state.brainKey));
   const choices = useRecoilValue(
     currentSimilarityKeys({ modal, isImageSearch })
   );
@@ -89,6 +91,17 @@ const SortBySimilarity = ({
   useLayoutEffect(() => {
     current && setState(current);
   }, [current]);
+
+  const validateK = (value: string) => {
+    if (/^[0-9\b]+$/.test(value)) {
+      if (!maxK) {
+        return true;
+      } else {
+        Number(value) <= maxK;
+      }
+    }
+    return false;
+  };
 
   const loadingButton: ButtonDetail[] = isLoading
     ? [
@@ -180,7 +193,7 @@ const SortBySimilarity = ({
             Find the
             <Input
               placeholder={"k"}
-              validator={(value) => value === "" || /^[0-9\b]+$/.test(value)}
+              validator={(value) => value === "" || validateK(value)}
               value={state?.k ? String(state.k) : ""}
               setter={(value) => {
                 updateState({ k: value == "" ? undefined : Number(value) });
@@ -219,6 +232,7 @@ const SortBySimilarity = ({
               updateState({ distField: !value.length ? undefined : value })
             }
           />
+          {maxK && "* Maximum k of selected model is " + maxK}
         </div>
       )}
     </Popout>
