@@ -13,6 +13,7 @@ from fiftyone.core.fields import (
     ListField,
     ObjectIdField,
     StringField,
+    IntField,
 )
 
 from .document import Document
@@ -31,3 +32,4 @@ class RunDocument(Document):
     config = DictField()
     view_stages = ListField(StringField())
     results = FileField()
+    max_k = IntField()

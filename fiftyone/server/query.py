@@ -83,6 +83,7 @@ class Run:
     timestamp: t.Optional[datetime]
     config: t.Optional[RunConfig]
     view_stages: t.Optional[t.List[str]]
+    max_k: t.Optional[int]
 
 
 @gql.enum
