@@ -454,7 +454,7 @@ class Run(Configurable):
             config=deepcopy(run_info.config.serialize()),
             view_stages=view_stages,
             results=None,
-            max_k=samples.get_brain_info(key),
+            max_k=samples.get_brain_info(key).config.max_k,
         )
         run_doc.save()
 

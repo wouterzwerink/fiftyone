@@ -87,6 +87,7 @@ export default r(graphql`
           version
           timestamp
           viewStages
+          maxK
           config {
             cls
             embeddingsField

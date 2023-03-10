@@ -338,6 +338,7 @@ export const similarityMethods = selector<{
   key: "similarityMethods",
   get: ({ get }) => {
     const methods = get(atoms.dataset).brainMethods;
+    console.info("all mehtods", methods);
 
     return methods
       .filter(

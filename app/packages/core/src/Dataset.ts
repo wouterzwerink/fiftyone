@@ -103,6 +103,7 @@ export const DatasetNodeQuery = graphql`
         version
         timestamp
         viewStages
+        maxK
         config {
           cls
           embeddingsField

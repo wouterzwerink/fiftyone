@@ -62,6 +62,7 @@ export namespace State {
 
   export interface Run {
     key: string;
+    maxK: number | null;
     version: string;
     timestamp: string;
     config: {};

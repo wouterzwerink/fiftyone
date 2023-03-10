@@ -87,6 +87,7 @@ type BrainRun implements Run {
   timestamp: datetime
   config: BrainRunConfig
   viewStages: [String!]
+  maxK: Int
 }
 
 type BrainRunConfig implements RunConfig {

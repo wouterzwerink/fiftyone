@@ -447,6 +447,7 @@ async def serialize_dataset(
             view = fov.DatasetView._build(dataset, serialized_view or [])
 
         doc = dataset._doc.to_dict(no_dereference=True)
+
         Dataset.modifier(doc)
         data = from_dict(Dataset, doc)
         data.view_cls = None
