@@ -117,7 +117,6 @@ export const useSortBySimilarity = (close) => {
             set(fos.savedLookerOptions, (cur) => ({ ...cur, showJSON: false }));
             set(fos.hiddenLabels, {});
             set(fos.modal, null);
-            set(searchBrainKeyValue, combinedParameters.brainKey);
             close();
 
             return data;
