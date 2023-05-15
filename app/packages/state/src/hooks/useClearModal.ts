@@ -20,19 +20,8 @@ import * as fos from "../recoil";
 
 export default () => {
   return useRecoilCallback(
-    ({ reset, set, snapshot }) =>
-      async () => {
-        const fullscreen = await snapshot.getPromise(fos.fullscreen);
-        if (fullscreen) {
-          return;
-        }
-
-        const currentOptions = await snapshot.getPromise(
-          fos.savedLookerOptions
-        );
-        set(fos.savedLookerOptions, { ...currentOptions, showJSON: false });
-        reset(fos.selectedLabels);
-        reset(fos.hiddenLabels);
+    ({ set }) =>
+      () => {
         set(fos.modal, null);
       },
     []

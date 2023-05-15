@@ -16,7 +16,7 @@ export default () => {
 
   return useRecoilCallback(
     ({ set, snapshot }) =>
-      async (sample: atoms.SampleData, navigation?: atoms.ModalNavigation) => {
+      async (cursor: string) => {
         const data = [
           [filterAtoms.modalFilters, filterAtoms.filters],
           ...["colorBy", "multicolorKeypoints", "showSkeletons"].map((key) => {
@@ -57,7 +57,7 @@ export default () => {
           set(data[i][0], results[i]);
         }
 
-        setExpandedSample(sample, navigation);
+        setExpandedSample(cursor);
       },
     [environment]
   );

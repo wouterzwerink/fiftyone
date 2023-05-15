@@ -6,8 +6,8 @@ import {
 } from "@fiftyone/looker";
 import {
   EMBEDDED_DOCUMENT_FIELD,
-  getMimeType,
   LIST_FIELD,
+  getMimeType,
 } from "@fiftyone/utilities";
 import { useCallback, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
@@ -54,7 +54,6 @@ export default <T extends FrameLooker | ImageLooker | VideoLooker>(
         | typeof VideoLooker = ImageLooker;
 
       const mimeType = getMimeType(sample);
-
       // checking for pcd extension instead of media_type because this also applies for group slices
       if (urls.filepath.endsWith(".pcd")) {
         constructor = PcdLooker;
