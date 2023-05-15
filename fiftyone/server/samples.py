@@ -6,9 +6,9 @@ FiftyOne Server samples pagination
 |
 """
 import asyncio
+from bson import ObjectId
 import strawberry as gql
 import typing as t
-
 
 from fiftyone.core.collections import SampleCollection
 from fiftyone.core.expressions import ViewField as F
@@ -95,11 +95,10 @@ async def paginate_samples(
     # full datasets.
     full_lookup = media == fom.VIDEO and (filters or stages)
     support = [1, 1] if not full_lookup else None
-    if after is None:
-        after = "-1"
-
-    if int(after) > -1:
-        view = view.skip(int(after) + 1)
+    offset, sample_id = after.split(":")
+    offset = int(offset) if offset else None
+    if offset and int(offset) > -1:
+        view = view.skip(int(offset) + 1)
 
     pipeline = view._pipeline(
         attach_frames=True,
@@ -109,6 +108,18 @@ async def paginate_samples(
         and (sample_filter.group.id and not sample_filter.group.slice),
         support=support,
     )
+
+    if sample_id and offset is None:
+        pipeline += [
+            {
+                "$setWindowFields": {
+                    "output": {"_index": {"$documentNumber": {}}},
+                    "sortBy": {"_id": 1},
+                }
+            },
+            {"$match": {"_id": ObjectId(sample_id)}},
+        ]
+
     # Only return the first frame of each video sample for the grid thumbnail
     if media == fom.VIDEO:
         pipeline.append({"$set": {"frames": {"$slice": ["$frames", 1]}}})
@@ -125,19 +136,22 @@ async def paginate_samples(
 
     metadata_cache = {}
     url_cache = {}
-    nodes = await asyncio.gather(
+    nodes: t.List[SampleItem] = await asyncio.gather(
         *[
             _create_sample_item(view, sample, metadata_cache, url_cache)
             for sample in samples
         ]
     )
 
+    if sample_id and offset is None:
+        offset = nodes[0].sample["_index"] - 1
+
     edges = []
     for idx, node in enumerate(nodes):
         edges.append(
             Edge(
                 node=node,
-                cursor=str(idx + int(after) + 1),
+                cursor=f"{offset + idx}:{node.id}",
             )
         )
 

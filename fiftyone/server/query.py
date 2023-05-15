@@ -343,7 +343,6 @@ class AppConfig:
 
 @gql.type
 class Query(fosa.AggregateQuery):
-
     aggregations = gql.field(resolver=aggregate_resolver)
 
     @gql.field
