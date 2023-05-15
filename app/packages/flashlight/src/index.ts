@@ -16,9 +16,6 @@ import {
   RowData,
   State,
 } from "./state";
-import { createScrollReader } from "./zooming";
-export type { Render, Response } from "./state";
-
 import {
   flashlight,
   flashlightContainer,
@@ -26,6 +23,8 @@ import {
 } from "./styles.module.css";
 import tile from "./tile";
 import { argMin, getDims } from "./util";
+import { createScrollReader } from "./zooming";
+export type { Render, Response } from "./state";
 
 export type FlashlightOptions = Optional<Options>;
 
@@ -47,7 +46,6 @@ export default class Flashlight<K> {
   private state: State<K>;
   private resizeObserver: ResizeObserver;
   private readonly config: FlashlightConfig<K>;
-  private pixelsSet: boolean;
   private ctx = 0;
   private resizeTimeout: ReturnType<typeof setTimeout>;
 
@@ -293,7 +291,7 @@ export default class Flashlight<K> {
     this.state.updater = updater;
   }
 
-  get(): Promise<void> | null {
+  get(): void {
     if (
       this.loading ||
       this.state.currentRequestKey === null ||
@@ -304,9 +302,9 @@ export default class Flashlight<K> {
 
     this.loading = true;
     const ctx = this.ctx;
-    return this.state
-      .get(this.state.currentRequestKey, this.state.selectedMediaFieldName)
-      .then(({ items, nextRequestKey }) => {
+    this.state.get(
+      this.state.currentRequestKey,
+      ({ items, nextRequestKey }) => {
         if (ctx !== this.ctx) {
           return;
         }
@@ -378,7 +376,8 @@ export default class Flashlight<K> {
           this.hidePixels();
           this.render();
         }
-      });
+      }
+    );
   }
 
   private requestMore() {
@@ -530,10 +529,11 @@ export default class Flashlight<K> {
       firstSection: 0,
       lastSection: 0,
       options: {
+        selectedMediaField: "filepath",
         offset: 0,
         rowAspectRatioThreshold: 5,
         ...config.options,
-      },
+      } as State<K>["options"],
       clean: new Set<number>(),
       shownSections: new Set<number>(),
       onItemClick: config.onItemClick,
@@ -558,10 +558,7 @@ export default class Flashlight<K> {
       return null;
     }
 
-    return (id) =>
-      this.state.onItemClick(() => this.get(), id, {
-        ...this.state.itemIndexMap,
-      });
+    return (id) => this.state.onItemClick(id);
   }
 
   private createContainer(): HTMLDivElement {

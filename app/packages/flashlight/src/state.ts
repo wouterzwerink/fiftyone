@@ -36,15 +36,11 @@ export interface Response<K> {
   nextRequestKey: K | null;
 }
 
-export type Get<K> = (key: K) => Promise<Response<K>>;
+export type Get<K> = (key: K, set: (response: Response<K>) => void) => void;
 
 export type ItemIndexMap = { [key: string]: number };
 
-export type OnItemClick = (
-  next: () => Promise<void>,
-  id: string,
-  itemIndexMap: ItemIndexMap
-) => void;
+export type OnItemClick = (id: string) => void;
 
 export type Render = (
   id: string,
