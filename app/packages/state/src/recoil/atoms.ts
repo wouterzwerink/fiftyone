@@ -4,41 +4,24 @@ import {
   datasetFragment$key,
   frameFieldsFragment,
   frameFieldsFragment$key,
+  getPageQuery,
   graphQLSyncFragmentAtom,
   mediaTypeFragment,
   mediaTypeFragment$key,
   sampleFieldsFragment,
-  sampleFieldsFragment$key,
+  samplesFragment,
+  samplesFragment$data,
+  samplesFragment$key,
+  samplesFragmentQuery,
+  selectorWithEffect,
+  subscribeTransition,
 } from "@fiftyone/relay";
 import { StrictField } from "@fiftyone/utilities";
 import { DefaultValue, atom, atomFamily } from "recoil";
+import { commitLocalUpdate } from "relay-runtime";
 import { sessionAtom } from "../session";
 import { collapseFields, transformDataset } from "../utils";
 import { State } from "./types";
-
-export interface AppSample extends Sample {
-  _id: string;
-  support?: [number, number];
-}
-
-export interface SampleData {
-  sample: AppSample;
-  aspectRatio: number;
-  frameRate?: number;
-  frameNumber?: number;
-  urls: {
-    [field: string]: string;
-  };
-}
-
-export interface ModalNavigation {
-  index: number;
-  setIndex: (index: number) => void;
-}
-
-export interface ModalSample extends SampleData {
-  navigation: ModalNavigation;
-}
 
 export const refresher = atom<number>({
   key: "refresher",
@@ -83,33 +66,113 @@ export const getBrowserStorageEffectForKey =
     });
   };
 
-export const modal = (() => {
-  let modal: ModalSample | null = null;
-  return graphQLSyncFragmentAtom<datasetFragment$key, ModalSample | null>(
-    {
-      fragments: [datasetFragment],
-      keys: ["dataset"],
-      read: (data, previous) => {
-        if (data.id !== previous?.id) {
-          modal = null;
-        }
+type ModalData = samplesFragment$data["samples"]["edges"][0] & {
+  next?: string;
+  previous?: string;
+};
 
-        return modal;
-      },
-      default: null,
-    },
-    {
-      key: "modal",
-      effects: [
-        ({ onSet }) => {
-          onSet((value) => {
-            modal = value;
-          });
+export const modal = atom<ModalData>({
+  key: "modal",
+  default: null,
+  effects: [
+    ({ setSelf, node, trigger }) => {
+      if (trigger === "set") {
+        return;
+      }
+
+      const {
+        pageQuery: {
+          preloadedQuery: { variables },
         },
-      ],
-    }
-  );
-})();
+      } = getPageQuery<samplesFragmentQuery>();
+
+      if (variables.samplesCursor) {
+      }
+
+      subscribeTransition(
+        "samplesTransition",
+        (cursor, environment, { set, get }) => {
+          const [queryCursor, sampleCursor] = cursor.split("/");
+          const [offsetString, sampleId] = sampleCursor.split(":");
+          const { name } = get(dataset);
+          const dataStore = environment.getStore().getSource();
+
+          commitLocalUpdate(environment, (store) => {
+            const root = store
+              .getRoot()
+              ?.getLinkedRecord<samplesFragment$data["samples"]>("samples", {
+                dataset: name,
+                view: [],
+                first: 40,
+                after: queryCursor,
+              });
+            const edges = root.getLinkedRecords("edges");
+            const offset = parseInt(offsetString) % 40;
+            const previousIndex = offset - 1;
+            const nextIndex = offset + 1;
+
+            const sample = edges[0].getLinkedRecord("node");
+
+            if (!sample) {
+              throw new Error(`${sampleId} not found`);
+            }
+
+            const sampleData =
+              dataStore.get<
+                samplesFragment$data["samples"]["edges"][0]["node"]
+              >(sampleId);
+            console.log(sampleData);
+            set(node, {
+              ...sampleData,
+
+              urls: sample
+                .getLinkedRecord("urls")
+                .map((dataId) =>
+                  dataStore.get<
+                    samplesFragment$data["samples"]["edges"][0]["node"]["urls"]
+                  >(dataId)
+                ),
+              next: edges[nextIndex]
+                ? `${queryCursor}/${
+                    edges[nextIndex].getValue("cursor") as string
+                  }`
+                : undefined,
+              previous:
+                previousIndex >= 0
+                  ? `${queryCursor}/${
+                      edges[previousIndex].getValue("cursor") as string
+                    }`
+                  : undefined,
+            });
+          });
+        }
+      );
+    },
+  ],
+});
+
+export const modalCursor = selectorWithEffect({
+  key: "modalCursor",
+  get: ({ get }) => {
+    return get(modal).cursor;
+  },
+  set: true,
+});
+
+export const samplesPivot = graphQLSyncFragmentAtom<
+  samplesFragment$key,
+  samplesFragment$data | null
+>(
+  {
+    fragments: [samplesFragment],
+    keys: [],
+    read: (data) => {
+      return data;
+    },
+    default: null,
+  },
+  { key: "samplesPivot" }
+);
 
 export interface SortResults {
   count: boolean;

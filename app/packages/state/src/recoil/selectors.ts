@@ -299,14 +299,12 @@ export const hiddenFieldLabels = selectorFamily<string[], string>({
     (fieldName) =>
     ({ get }) => {
       const labels = get(atoms.hiddenLabels);
-      const {
-        sample: { _id },
-      } = get(atoms.modal);
+      const { id } = get(atoms.modal).node;
 
-      if (_id) {
+      if (id) {
         return Object.entries(labels)
           .filter(
-            ([_, { sampleId: id, field }]) => _id === id && field === fieldName
+            ([_, { sampleId: id, field }]) => id === id && field === fieldName
           )
           .map(([labelId]) => labelId);
       }
@@ -413,16 +411,10 @@ export const mediaFields = selector<string[]>({
     const selectedFields = Object.keys(
       get(fieldSchema({ space: State.SPACE.SAMPLE }))
     );
-    console.log(get(atoms.dataset)?.appConfig?.mediaFields);
     return (get(atoms.dataset)?.appConfig?.mediaFields || []).filter((field) =>
       selectedFields.includes(field)
     );
   },
-});
-
-export const modalNavigation = selector<atoms.ModalNavigation>({
-  key: "modalNavigation",
-  get: ({ get }) => get(atoms.modal).navigation,
 });
 
 export const selectedPatchIds = selectorFamily({

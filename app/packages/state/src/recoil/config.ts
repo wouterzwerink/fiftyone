@@ -11,7 +11,10 @@ const configData = graphQLSyncFragmentAtom<
   configFragment$key,
   configFragment$data
 >(
-  { fragments: [configFragment], default: null },
+  {
+    fragments: [configFragment],
+    default: null,
+  },
   {
     key: "configData",
   }
