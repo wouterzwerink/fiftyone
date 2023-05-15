@@ -5,14 +5,20 @@ import {
   TransactionInterface_UNSTABLE,
   useRecoilTransaction_UNSTABLE,
 } from "recoil";
-import { ConcreteRequest, OperationType } from "relay-runtime";
+import { ConcreteRequest, IEnvironment, OperationType } from "relay-runtime";
 import { datasetQuery } from "./queries";
 import { SelectorEffectContext, Setter } from "./selectorWithEffect";
+
+export type LocationState = {
+  view?: object[];
+  cursor?: string;
+};
 
 export interface PageQuery<T extends OperationType> {
   preloadedQuery: PreloadedQuery<T>;
   concreteRequest: ConcreteRequest;
   data: T["response"];
+  state: LocationState;
 }
 
 export type PageSubscription<T extends OperationType> = (
@@ -24,6 +30,35 @@ let pageQueryReader: <T extends OperationType>() => PageQuery<T>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const subscribers = new Set<PageSubscription<any>>();
+const transitionSubscribers = new Map<
+  string,
+  Set<
+    (
+      data: unknown,
+      environment: IEnvironment,
+      transationInterface: TransactionInterface_UNSTABLE
+    ) => void
+  >
+>([["samplesTransition", new Set()]]);
+
+interface Transitions {
+  samplesTransition: string;
+}
+
+export function subscribeTransition<K extends keyof Transitions>(
+  transition: K,
+  subscription: (
+    data: Transitions[K],
+    environment: IEnvironment,
+    transactionInterface: TransactionInterface_UNSTABLE
+  ) => void
+) {
+  transitionSubscribers.get(transition).add(subscription);
+
+  return () => {
+    transitionSubscribers.get(transition).delete(subscription);
+  };
+}
 
 export function subscribe<T extends OperationType>(
   subscription: PageSubscription<T>
@@ -70,7 +105,10 @@ export const resetEffect = <T extends unknown>(
 type WriterProps<T extends OperationType> = React.PropsWithChildren<{
   read: () => PageQuery<T>;
   setters: Map<string, Setter>;
-  subscribe: (fn: (pageQuery: PageQuery<T>) => void) => () => void;
+  subscribe: (
+    fn: (pageQuery: PageQuery<T>) => void,
+    transtionsFn: (name: string, data: unknown) => void
+  ) => () => void;
 }>;
 
 /**
@@ -95,13 +133,28 @@ export function Writer<T extends OperationType>({
   );
 
   React.useEffect(() => {
-    return subscribe((pageQuery) => {
-      // @ts-ignore
-      pageQueryReader = () => pageQuery;
-      set((transactionInterface) =>
-        subscribers.forEach((cb) => cb(pageQuery, transactionInterface))
-      );
-    });
+    return subscribe(
+      (pageQuery) => {
+        // @ts-ignore
+        pageQueryReader = () => pageQuery;
+        set((transactionInterface) =>
+          subscribers.forEach((cb) => cb(pageQuery, transactionInterface))
+        );
+      },
+      (name: string, data: unknown) => {
+        set((transactionInterface) =>
+          transitionSubscribers
+            .get(name)
+            .forEach((cb) =>
+              cb(
+                data,
+                pageQueryReader().preloadedQuery.environment,
+                transactionInterface
+              )
+            )
+        );
+      }
+    );
   }, [set, subscribe]);
 
   return (
