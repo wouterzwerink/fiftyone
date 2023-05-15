@@ -1,11 +1,12 @@
 import { Dataset } from "@fiftyone/core";
+import Modal from "@fiftyone/core/src/components/Modal/Modal";
 import "@fiftyone/embeddings";
 import "@fiftyone/looker-3d";
 import "@fiftyone/map";
 import "@fiftyone/relay";
 import { datasetQueryContext, modal } from "@fiftyone/state";
 import { NotFoundError } from "@fiftyone/utilities";
-import React, { useEffect } from "react";
+import React from "react";
 import { usePreloadedQuery } from "react-relay";
 import { useRecoilValue } from "recoil";
 import { graphql } from "relay-runtime";
@@ -21,7 +22,9 @@ const DatasetPageQueryNode = graphql`
     $cursor: String
     $savedViewSlug: String
     $name: String!
-    $view: BSONArray
+    $view: BSONArray!
+    $samplesPage: Int
+    $samplesCursor: String
   ) {
     dataset(name: $name, view: $view, savedViewSlug: $savedViewSlug) {
       name
@@ -30,19 +33,14 @@ const DatasetPageQueryNode = graphql`
     ...NavFragment
     ...savedViewsFragment
     ...configFragment
+    ...samplesFragment
     ...stageDefinitionsFragment
   }
 `;
 
 const DatasetPage: Route<DatasetPageQuery> = ({ prepared }) => {
   const data = usePreloadedQuery(DatasetPageQueryNode, prepared);
-  const isModalActive = Boolean(useRecoilValue(modal));
-
-  useEffect(() => {
-    document
-      .getElementById("modal")
-      ?.classList.toggle("modalon", isModalActive);
-  }, [isModalActive]);
+  const modalActive = Boolean(useRecoilValue(modal));
 
   if (!data.dataset?.name) {
     throw new NotFoundError({ path: `/datasets/${prepared.variables.name}` });
@@ -55,6 +53,7 @@ const DatasetPage: Route<DatasetPageQuery> = ({ prepared }) => {
         <datasetQueryContext.Provider value={data}>
           <Dataset />
         </datasetQueryContext.Provider>
+        {modalActive && <Modal />}
       </div>
     </>
   );

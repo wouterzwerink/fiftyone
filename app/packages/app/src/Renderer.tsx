@@ -1,5 +1,5 @@
 import { Loading, Pending } from "@fiftyone/components";
-import { subscribe } from "@fiftyone/relay";
+import { subscribe, subscribeTransition } from "@fiftyone/relay";
 import { theme, themeConfig } from "@fiftyone/state";
 import { useColorScheme } from "@mui/material";
 import React, { Suspense, useEffect, useLayoutEffect } from "react";
@@ -44,13 +44,19 @@ const Renderer = () => {
 
   useEffect(() => {
     router.load().then(setRouteEntry);
-    subscribe((_, { set }) => {
+    return subscribe((_, { set }) => {
       set(entry, router.get());
       set(pendingEntry, false);
     });
   }, [router, setRouteEntry]);
 
-  useLayoutEffect(() => {}, []);
+  useEffect(
+    () =>
+      subscribeTransition("samplesTransition", (_, __, { set }) =>
+        set(pendingEntry, false)
+      ),
+    []
+  );
 
   useEffect(() => {
     return router.subscribe(

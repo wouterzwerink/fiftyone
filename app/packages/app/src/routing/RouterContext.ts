@@ -1,29 +1,24 @@
-import { State } from "@fiftyone/state";
+import { LocationState } from "@fiftyone/relay";
 import {
-  isElectron,
-  isNotebook,
   NotFoundError,
   Resource,
+  isElectron,
+  isNotebook,
 } from "@fiftyone/utilities";
-import {
-  Action,
-  createBrowserHistory,
-  createMemoryHistory,
-  Location,
-} from "history";
+import { Action, createBrowserHistory, createMemoryHistory } from "history";
 import React from "react";
-import { loadQuery, PreloadedQuery } from "react-relay";
+import { PreloadedQuery, loadQuery } from "react-relay";
 import {
   ConcreteRequest,
   Environment,
-  fetchQuery,
-  OperationType,
   VariablesOf,
+  fetchQuery,
 } from "relay-runtime";
-
-import { Queries, Route } from ".";
-import { matchPath, MatchPathResult } from "./matchPath";
-import RouteDefinition from "./RouteDefinition";
+import { MatchPathResult, Queries, Route, matchPath } from ".";
+import RouteDefinition, {
+  FiftyOneLocation,
+  Transitions,
+} from "./RouteDefinition";
 
 export interface RouteData<T extends Queries> {
   path: string;
@@ -31,28 +26,27 @@ export interface RouteData<T extends Queries> {
   variables: VariablesOf<T>;
 }
 
-type LocationState<T extends OperationType> = {
-  view?: State.Stage[];
-  savedViewSlug?: string;
-} & VariablesOf<T>;
-
-interface FiftyOneLocation extends Location {
-  state: LocationState<Queries>;
-}
-
 export interface Entry<T extends Queries> extends FiftyOneLocation {
   component: Route<T>;
   concreteRequest: ConcreteRequest;
   preloadedQuery: PreloadedQuery<T>;
+  transitions?: Transitions<T>;
   data: T["response"];
+  state: LocationState;
   cleanup: () => void;
 }
 
 type Subscription = (entry: Entry<Queries>, action?: Action) => void;
+type TransitionSubscription<T> = (data: T) => void;
 
 type Subscribe = (
   subscription: Subscription,
   onPending?: () => void
+) => () => void;
+
+type TransitionSubscribe<T> = (
+  transition: string,
+  subscription: TransitionSubscription<T>
 ) => () => void;
 
 export interface RoutingContext<T extends Queries> {
@@ -60,6 +54,7 @@ export interface RoutingContext<T extends Queries> {
   get: () => Entry<T>;
   load: (hard?: boolean) => Promise<Entry<T>>;
   subscribe: Subscribe;
+  transitionSubscribe: TransitionSubscribe<any>;
 }
 
 export interface Router<T extends Queries> {
@@ -84,14 +79,47 @@ export const createRouter = (
     [Subscription, (() => void) | undefined]
   >();
 
+  const transitionSubscribers = new Map<string, Set<(data: unknown) => void>>();
+
   const update = (location: FiftyOneLocation, action?: Action) => {
     requestAnimationFrame(() =>
       subscribers.forEach(([_, onPending]) => onPending && onPending())
     );
+
+    const current = currentEntryResource.get();
+
+    if (!current) {
+      throw new Error("expected entry");
+    }
+
+    const { route, matchResult } = matchRoute(
+      history.location as FiftyOneLocation,
+      routes
+    );
+
+    if (location.pathname === current.pathname) {
+      const transitions = Object.entries(current?.transitions || {})
+        .map<[string, unknown]>(([_, trigger]) => [_, trigger(location)])
+        .filter(([_, data]) => data);
+
+      if (transitions.length > 1) {
+        throw new Error("only one transition allowed");
+      } else if (transitions.length) {
+        const [name, data] = transitions[0];
+        requestAnimationFrame(() => {
+          transitionSubscribers.get(name)?.forEach((fn) => {
+            fn(data);
+          });
+        });
+        return;
+      }
+    }
+
     currentEntryResource.load().then(({ cleanup }) => {
       currentEntryResource = getEntryResource(
         environment,
-        routes,
+        route,
+        matchResult.variables,
         location as FiftyOneLocation
       );
 
@@ -106,6 +134,7 @@ export const createRouter = (
 
   const cleanup = history.listen(({ location, action }) => {
     if (!currentEntryResource) return;
+
     update(location as FiftyOneLocation, action);
   });
 
@@ -114,9 +143,14 @@ export const createRouter = (
     load(hard = false) {
       const runUpdate = currentEntryResource && hard;
       if (!currentEntryResource || hard) {
+        const { route, matchResult } = matchRoute(
+          history.location as FiftyOneLocation,
+          routes
+        );
         currentEntryResource = getEntryResource(
           environment,
-          routes,
+          route,
+          matchResult.variables,
           history.location as FiftyOneLocation,
           hard
         );
@@ -142,6 +176,15 @@ export const createRouter = (
       subscribers.set(id, [cb, onPending]);
       return dispose;
     },
+    transitionSubscribe(transition, cb) {
+      !transitionSubscribers.has(transition) &&
+        transitionSubscribers.set(transition, new Set());
+      transitionSubscribers.get(transition)?.add(cb);
+
+      return () => {
+        transitionSubscribers.get(transition)?.delete(cb);
+      };
+    },
   };
 
   return {
@@ -152,31 +195,11 @@ export const createRouter = (
 
 const getEntryResource = <T extends Queries>(
   environment: Environment,
-  routes: RouteDefinition<T>[],
+  route: RouteDefinition<T>,
+  variables: VariablesOf<T>,
   location: FiftyOneLocation,
   hard = false
 ): Resource<Entry<T>> => {
-  let route: RouteDefinition<T>;
-  let matchResult: MatchPathResult<T>;
-  for (let index = 0; index < routes.length; index++) {
-    route = routes[index];
-    const match = matchPath<T>(
-      location.pathname,
-      route,
-      location.search,
-      location.state
-    );
-
-    if (match) {
-      matchResult = match;
-      break;
-    }
-  }
-
-  if (matchResult == null) {
-    throw new NotFoundError({ path: location.pathname });
-  }
-
   const fetchPolicy = hard ? "network-only" : "store-or-network";
 
   return new Resource(() => {
@@ -185,7 +208,7 @@ const getEntryResource = <T extends Queries>(
         const preloadedQuery = loadQuery(
           environment,
           concreteRequest,
-          matchResult.variables || {},
+          variables || {},
           {
             fetchPolicy,
           }
@@ -200,14 +223,12 @@ const getEntryResource = <T extends Queries>(
         const subscription = fetchQuery(
           environment,
           concreteRequest,
-          matchResult.variables || {},
+          variables || {},
           { fetchPolicy }
         ).subscribe({
           next: (data) => {
-            const { state, ...rest } = location;
             resolveEntry({
-              state: matchResult.variables as LocationState<T>,
-              ...rest,
+              ...location,
               component,
               data,
               concreteRequest,
@@ -215,6 +236,7 @@ const getEntryResource = <T extends Queries>(
               cleanup: () => {
                 subscription?.unsubscribe();
               },
+              transitions: route.transitions,
             });
           },
 
@@ -225,6 +247,29 @@ const getEntryResource = <T extends Queries>(
       }
     );
   });
+};
+
+const matchRoute = <T extends Queries>(
+  location: FiftyOneLocation,
+  routes: RouteDefinition<T>[]
+) => {
+  let route: RouteDefinition<T> | undefined = undefined;
+  let matchResult: MatchPathResult<T> | undefined = undefined;
+  for (let index = 0; index < routes.length; index++) {
+    route = routes[index];
+    const match = matchPath<T>(location, route);
+
+    if (match) {
+      matchResult = match;
+      break;
+    }
+  }
+
+  if (!matchResult || !route) {
+    throw new NotFoundError({ path: location.pathname });
+  }
+
+  return { route, matchResult };
 };
 
 export const RouterContext = React.createContext<

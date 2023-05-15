@@ -37,7 +37,14 @@ import { DefaultValue, useRecoilValue } from "recoil";
 import { commitMutation, IEnvironment } from "relay-runtime";
 import Setup from "./components/Setup";
 import { pendingEntry } from "./Renderer";
-import { Entry, matchPath, Queries, useRouterContext } from "./routing";
+import {
+  Entry,
+  FiftyOneLocation,
+  matchPath,
+  Queries,
+  RoutingContext,
+  useRouterContext,
+} from "./routing";
 import useRefresh from "./useRefresh";
 
 enum Events {
@@ -59,7 +66,7 @@ enum AppReadyState {
 
 export const SessionContext = React.createContext<Session>({});
 
-const Sync: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
+const Sync = ({ children }: { children: React.ReactNode }) => {
   const [readyState, setReadyState] = useState(AppReadyState.CONNECTING);
   const readyStateRef = useRef<AppReadyState>();
   readyStateRef.current = readyState;
@@ -83,7 +90,6 @@ const Sync: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
 
   React.useEffect(() => {
     const controller = new AbortController();
-
     getEventSource(
       "/events",
       {
@@ -169,7 +175,7 @@ const Sync: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
       controller.signal,
       {
         initializer: {
-          dataset: getDatasetName(router.history.location.pathname),
+          dataset: getDatasetName(router),
           view: getSavedViewName(router.history.location.search),
         },
         subscription,
@@ -185,15 +191,7 @@ const Sync: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
     );
 
     return () => controller.abort();
-  }, [
-    clearModal,
-    handleError,
-    refresh,
-    router,
-    screenshot,
-    setter,
-    subscription,
-  ]);
+  }, []);
 
   return (
     <SessionContext.Provider value={sessionRef.current}>
@@ -271,7 +269,8 @@ const Sync: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
                       form: {},
                     },
                   });
-
+                  sessionRef.current.selectedSamples = new Set();
+                  sessionRef.current.selectedLabels = [];
                   router.history.push(`${router.get().pathname}${search}`, {
                     view: [],
                   });
@@ -311,13 +310,48 @@ const Sync: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
                   router.load(true);
                 },
               ],
+              [
+                "modalCursor",
+                (_, newValue) => {
+                  const unsubscribe = subscribe((_, { reset, set }) => {
+                    set(fos.savedLookerOptions, (current) => ({
+                      ...current,
+                      showJSON: false,
+                    }));
+                    reset(fos.hiddenLabels);
+                    unsubscribe();
+                  });
+                  sessionRef.current.selectedLabels = [];
+
+                  const params = new URLSearchParams(
+                    router.history.location.search
+                  );
+                  if (newValue instanceof DefaultValue || newValue === null) {
+                    params.delete("sampleId");
+                    newValue = null;
+                  } else {
+                    const [offset, sampleId] = newValue
+                      .split("/")[1]
+                      .split(":");
+                    params.set("sampleId", sampleId);
+                  }
+                  const search = params.toString();
+
+                  router.history.push(
+                    `${router.history.location.pathname}${
+                      search.length ? `?${search}` : ""
+                    }`,
+                    { ...router.history.location.state, cursor: newValue }
+                  );
+                },
+              ],
             ])
           }
-          subscribe={(fn) => {
+          subscribe={(fn, transitionFn) => {
             let {
               preloadedQuery: { variables: current },
             } = router.get();
-            return router.subscribe((entry, action) => {
+            const dispose = router.subscribe((entry, action) => {
               sessionRef.current.selectedSamples = new Set();
               sessionRef.current.selectedLabels = [];
               // @ts-ignore
@@ -328,6 +362,17 @@ const Sync: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
               dispatchSideEffect(entry, action, subscription);
               fn(entry);
             });
+            const samplesTransition = router.transitionSubscribe(
+              "samplesTransition",
+              (cursor: string) => {
+                transitionFn("samplesTransition", cursor);
+              }
+            );
+
+            return () => {
+              samplesTransition();
+              dispose();
+            };
           }}
         >
           {children}
@@ -414,15 +459,11 @@ const WRITE_HANDLERS: {
 
 export default Sync;
 
-const getDatasetName = (pathname: string) => {
-  const result = matchPath(
-    pathname,
-    {
-      path: "/datasets/:name",
-    },
-    "",
-    {}
-  );
+const getDatasetName = (router: RoutingContext<Queries>) => {
+  const result = matchPath(router.history.location as FiftyOneLocation, {
+    path: "/datasets/:name",
+    searchParams: {},
+  });
 
   if (result) {
     return decodeURIComponent(result.variables.name);

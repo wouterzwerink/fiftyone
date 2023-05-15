@@ -1,5 +1,6 @@
 import { Key, pathToRegexp } from "path-to-regexp";
 import { OperationType, VariablesOf } from "relay-runtime";
+import { FiftyOneLocation, ParameterResolvers } from "./RouteDefinition";
 
 interface StringKey extends Key {
   name: string;
@@ -22,9 +23,9 @@ const compilePath = (path: string): CompilePathResult => {
   return result;
 };
 
-interface MatchPathOptions {
+interface MatchPathOptions<T extends OperationType> {
   path: string;
-  searchParams?: { [key: string]: string };
+  searchParams: ParameterResolvers<T>;
 }
 
 export interface MatchPathResult<T extends OperationType> {
@@ -34,31 +35,32 @@ export interface MatchPathResult<T extends OperationType> {
 }
 
 export const matchPath = <T extends OperationType>(
-  pathname: string,
-  options: MatchPathOptions,
-  search: string,
-  variables: Partial<VariablesOf<T>>
+  location: FiftyOneLocation,
+  options: MatchPathOptions<T>
 ): MatchPathResult<T> | null => {
-  const { path, searchParams = {} } = options;
+  const { path, searchParams } = options;
 
   const { regexp, keys } = compilePath(path);
-  const match = regexp.exec(pathname);
-
+  const match = regexp.exec(location.pathname);
   if (!match) return null;
   const [url, ...values] = match;
 
   let all = keys.reduce((acc, key, i) => {
     return { ...acc, [key.name]: decodeURIComponent(values[i]) };
-  }, variables);
+  }, location.state as Partial<VariablesOf<T>>);
 
-  const params = new URLSearchParams(search);
-  Object.entries(searchParams).forEach(([param, variable]) => {
-    if (params.has(param)) {
-      all = {
-        ...all,
-        [variable]: decodeURIComponent(params.get(param) || ""),
-      };
-    }
+  const params = new URLSearchParams(location.search);
+  Object.entries(searchParams).forEach(([param, { name, resolver }]) => {
+    const value = params.has(param)
+      ? decodeURIComponent(params.get(param) as string)
+      : null;
+
+    const include = resolver ? resolver(value) : { [name]: value };
+
+    all = {
+      ...all,
+      ...include,
+    };
   });
 
   return {
