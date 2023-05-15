@@ -1,10 +1,10 @@
-import React, { useCallback } from "react";
-import { useRecoilValue } from "recoil";
-import { Controller } from "@react-spring/web";
-import styled from "styled-components";
-import Sidebar, { Entries } from "./Sidebar";
 import * as fos from "@fiftyone/state";
+import { Controller } from "@react-spring/web";
+import React, { Suspense, useCallback } from "react";
+import { useRecoilValue } from "recoil";
+import styled from "styled-components";
 import MainSpace from "./MainSpace";
+import Sidebar, { Entries } from "./Sidebar";
 
 const Container = styled.div`
   display: flex;
@@ -82,15 +82,10 @@ function SamplesContainer() {
           return {
             children: (
               <Entries.Empty
-                useText={
-                  group === "tags"
-                    ? () => fos.useTagText(false)
-                    : group === "label tags"
-                    ? () => fos.useLabelTagText(false)
-                    : () => ({
-                        text: "No fields",
-                      })
-                }
+                useText={() => ({
+                  loading: false,
+                  text: "No fields",
+                })}
                 key={key}
               />
             ),
@@ -104,7 +99,16 @@ function SamplesContainer() {
   );
   return (
     <Container>
-      {showSidebar && <Sidebar render={renderGridEntry} modal={false} />}
+      {
+        <Suspense
+          fallback={() => {
+            console.log("WUT");
+            return null;
+          }}
+        >
+          <Sidebar render={renderGridEntry} modal={false} />
+        </Suspense>
+      }
       <MainSpace />
     </Container>
   );

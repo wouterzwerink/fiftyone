@@ -1,9 +1,6 @@
-import { modal } from "@fiftyone/state";
 import React from "react";
-import { useRecoilValue } from "recoil";
 import styled from "styled-components";
 
-import Modal from "./Modal";
 import SamplesContainer from "./SamplesContainer";
 
 const Container = styled.div`
@@ -22,16 +19,12 @@ const Body = styled.div`
 `;
 
 function Dataset() {
-  const isModalActive = Boolean(useRecoilValue(modal));
   return (
-    <>
-      {isModalActive && <Modal />}
-      <Container>
-        <Body key={"body"}>
-          <SamplesContainer key={"samples"} />
-        </Body>
-      </Container>
-    </>
+    <Container>
+      <Body>
+        <SamplesContainer />
+      </Body>
+    </Container>
   );
 }
 

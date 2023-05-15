@@ -1,20 +1,19 @@
 import Flashlight from "@fiftyone/flashlight";
 import { freeVideos } from "@fiftyone/looker";
 import * as fos from "@fiftyone/state";
-import { deferrer, stringifyObj, useEventHandler } from "@fiftyone/state";
+import { deferrer, useEventHandler } from "@fiftyone/state";
 import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { useRecoilCallback, useRecoilValue } from "recoil";
 import { v4 as uuid } from "uuid";
 import { flashlightLooker } from "./Grid.module.css";
 import { rowAspectRatioThreshold } from "./recoil";
-import useExpandSample from "./useExpandSample";
 import usePage from "./usePage";
 import useResize from "./useResize";
 
 const Grid: React.FC<{}> = () => {
   const [id] = React.useState(() => uuid());
   const store = fos.useLookerStore();
-  const expandSample = useExpandSample(store);
+  const expandSample = fos.useExpandSample();
   const initialized = useRef(false);
   const deferred = deferrer(initialized);
 
@@ -95,16 +94,9 @@ const Grid: React.FC<{}> = () => {
       freeVideos();
     }),
     [
-      stringifyObj(useRecoilValue(fos.filters)),
       useRecoilValue(fos.datasetName),
-      useRecoilValue(fos.cropToContent(false)),
       fos.filterView(useRecoilValue(fos.view)),
-      useRecoilValue(fos.groupSlice),
       useRecoilValue(fos.refresher),
-      useRecoilValue(fos.similarityParameters),
-      useRecoilValue(fos.selectedMediaField(false)),
-      useRecoilValue(fos.extendedStagesUnsorted),
-      useRecoilValue(fos.extendedStages),
     ]
   );
 

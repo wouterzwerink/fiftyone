@@ -7,16 +7,8 @@ import {
 } from "@fiftyone/components";
 import { AbstractLooker } from "@fiftyone/looker";
 import * as fos from "@fiftyone/state";
-import { modalNavigation, useEventHandler } from "@fiftyone/state";
 import { Controller } from "@react-spring/core";
-import React, {
-  Fragment,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import ReactDOM from "react-dom";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilValue } from "recoil";
 import styled from "styled-components";
 import Sidebar, { Entries } from "../Sidebar";
@@ -25,27 +17,15 @@ import Sample from "./Sample";
 import Sample3d from "./Sample3d";
 import { TooltipInfo } from "./TooltipInfo";
 
-const ModalWrapper = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10000;
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  background-color: ${({ theme }) => theme.neutral.softBg};
-`;
-
 const Container = styled.div`
   background-color: ${({ theme }) => theme.background.level2};
-  border: 1px solid ${({ theme }) => theme.primary.plainBorder};
-  position: relative;
+  border-top: 1px solid ${({ theme }) => theme.primary.plainBorder};
   display: flex;
   justify-content: center;
   overflow: hidden;
   box-shadow: 0 20px 25px -20px #000;
+  position: absolute;
+  top: 0;
 `;
 
 const ContentColumn = styled.div`
@@ -91,8 +71,6 @@ const SampleModal = () => {
   const disabled = useRecoilValue(fos.disabledPaths);
 
   const lookerRef = useRef<AbstractLooker>();
-
-  const navigation = useRecoilValue(modalNavigation);
 
   const renderEntry = useCallback(
     (
@@ -189,32 +167,17 @@ const SampleModal = () => {
     []
   );
 
-  const screen = useRecoilValue(fos.fullscreen)
-    ? { width: "100%", height: "100%" }
-    : { width: "95%", height: "90%", borderRadius: "3px" };
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const screen = { width: "100%", height: "100%" };
   const isGroup = useRecoilValue(fos.isGroup);
   const isPcd = useRecoilValue(fos.isPointcloudDataset);
   const jsonPanel = fos.useJSONPanel();
   const helpPanel = fos.useHelpPanel();
+  const setModal = fos.useSetExpandedSample();
+  const { next, previous } = useRecoilValue(fos.modal);
+
+  const tooltip = fos.useTooltip();
 
   const [isNavigationHidden, setIsNavigationHidden] = useState(false);
-
-  const navigateNext = useCallback(() => {
-    jsonPanel.close();
-    helpPanel.close();
-    navigation.setIndex(navigation.index + 1);
-  }, [navigation, jsonPanel, helpPanel]);
-
-  const navigatePrevious = useCallback(() => {
-    jsonPanel.close();
-    helpPanel.close();
-
-    if (navigation.index > 0) {
-      navigation.setIndex(navigation.index - 1);
-    }
-  }, [navigation, jsonPanel, helpPanel]);
-
   const keyboardHandler = useCallback(
     (e: KeyboardEvent) => {
       const active = document.activeElement;
@@ -223,21 +186,18 @@ const SampleModal = () => {
           return;
         }
       }
-      if (e.key === "ArrowLeft") {
-        navigatePrevious();
-      } else if (e.key === "ArrowRight") {
-        navigateNext();
+      if (e.key === "ArrowLeft" && previous) {
+        setModal(previous);
+      } else if (e.key === "ArrowRight" && next) {
+        setModal(next);
       } else if (e.key === "c") {
         setIsNavigationHidden((prev) => !prev);
       }
       // note: don't stop event propagation here
     },
-    [navigateNext, navigatePrevious]
+    [next, previous]
   );
-
-  useEventHandler(document, "keydown", keyboardHandler);
-
-  const tooltip = fos.useTooltip();
+  fos.useEventHandler(document, "keydown", keyboardHandler);
 
   const eventHandler = useCallback(
     (e) => {
@@ -266,61 +226,69 @@ const SampleModal = () => {
     };
   }, [eventHandler]);
 
-  return ReactDOM.createPortal(
-    <Fragment>
-      <ModalWrapper
-        ref={wrapperRef}
-        onClick={(event) => event.target === wrapperRef.current && clearModal()}
-      >
-        <Container style={{ ...screen, zIndex: 10001 }}>
-          <TooltipInfo coordinates={tooltip.coordinates} />
-          <ContentColumn>
-            {!isNavigationHidden && navigation.index > 0 && (
-              <Arrow>
-                <LookerArrowLeftIcon
-                  data-cy="nav-left-button"
-                  onClick={navigatePrevious}
-                />
-              </Arrow>
+  return (
+    <>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "absolute",
+          top: 0,
+          backgroundColor: "var(--joy-palette-background-modalBackdrop)",
+          zIndex: 1000,
+        }}
+        onClick={clearModal}
+      />
+      <Container style={{ ...screen, zIndex: 10001 }}>
+        <TooltipInfo coordinates={tooltip.coordinates} />
+        <ContentColumn>
+          {!isNavigationHidden && previous && (
+            <Arrow>
+              <LookerArrowLeftIcon
+                data-cy="nav-left-button"
+                onClick={() => setModal(previous)}
+              />
+            </Arrow>
+          )}
+          {!isNavigationHidden && next && (
+            <Arrow isRight>
+              <LookerArrowRightIcon
+                data-cy="nav-right-button"
+                onClick={() => {
+                  console.log("ENEN", next);
+                  setModal(next);
+                }}
+              />
+            </Arrow>
+          )}
+          <ErrorBoundary onReset={() => {}}>
+            {isGroup ? (
+              <Group lookerRefCallback={lookerRefCallback} />
+            ) : isPcd ? (
+              <Sample3d />
+            ) : (
+              <Sample lookerRefCallback={lookerRefCallback} />
             )}
-            {!isNavigationHidden && (
-              <Arrow isRight>
-                <LookerArrowRightIcon
-                  data-cy="nav-right-button"
-                  onClick={navigateNext}
-                />
-              </Arrow>
+            {jsonPanel.isOpen && (
+              <JSONPanel
+                containerRef={jsonPanel.containerRef}
+                onClose={() => jsonPanel.close()}
+                onCopy={() => jsonPanel.copy()}
+                json={jsonPanel.json}
+              />
             )}
-            <ErrorBoundary onReset={() => {}}>
-              {isGroup ? (
-                <Group lookerRefCallback={lookerRefCallback} />
-              ) : isPcd ? (
-                <Sample3d />
-              ) : (
-                <Sample lookerRefCallback={lookerRefCallback} />
-              )}
-              {jsonPanel.isOpen && (
-                <JSONPanel
-                  containerRef={jsonPanel.containerRef}
-                  onClose={() => jsonPanel.close()}
-                  onCopy={() => jsonPanel.copy()}
-                  json={jsonPanel.json}
-                />
-              )}
-              {helpPanel.isOpen && (
-                <HelpPanel
-                  containerRef={helpPanel.containerRef}
-                  onClose={() => helpPanel.close()}
-                  items={helpPanel.items}
-                />
-              )}
-            </ErrorBoundary>
-          </ContentColumn>
-          <Sidebar render={renderEntry} modal={true} />
-        </Container>
-      </ModalWrapper>
-    </Fragment>,
-    document.getElementById("modal") as HTMLDivElement
+            {helpPanel.isOpen && (
+              <HelpPanel
+                containerRef={helpPanel.containerRef}
+                onClose={() => helpPanel.close()}
+                items={helpPanel.items}
+              />
+            )}
+          </ErrorBoundary>
+        </ContentColumn>
+        <Sidebar render={renderEntry} modal={true} />
+      </Container>
+    </>
   );
 };
 

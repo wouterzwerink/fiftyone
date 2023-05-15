@@ -1,71 +1,67 @@
 import { Get } from "@fiftyone/flashlight/src/state";
 import { zoomAspectRatio } from "@fiftyone/looker";
-import { Lookers, LookerStore, SampleData } from "@fiftyone/state";
-import { getFetchFunction } from "@fiftyone/utilities";
+import { getPageQuery } from "@fiftyone/relay";
+import { Lookers, LookerStore, samplesPivot } from "@fiftyone/state";
 import { MutableRefObject, useRef } from "react";
-import { useErrorHandler } from "react-error-boundary";
 import { useRecoilCallback } from "recoil";
-import { pageParameters } from "./recoil";
+import { DatasetPageQuery } from "../../../../app/src/pages/datasets/__generated__/DatasetPageQuery.graphql";
 
 const usePage = (
   modal: boolean,
   store: LookerStore<Lookers>
 ): [MutableRefObject<number>, Get<number>] => {
-  const handleError = useErrorHandler();
   const next = useRef(0);
   return [
     next,
     useRecoilCallback(
       ({ snapshot }) =>
-        async (page: number) => {
-          try {
-            const { zoom, ...params } = await snapshot.getPromise(
-              pageParameters(modal)
-            );
-            const { results, more } = await getFetchFunction()(
-              "POST",
-              "/samples",
-              {
-                ...params,
-                page,
-              }
-            );
+        (page: number, set) => {
+          const pivot = snapshot.getLoadable(samplesPivot);
 
-            const itemData: SampleData[] = results.map((result) => {
-              const data: SampleData = {
-                sample: result.sample,
-                aspectRatio: result.aspect_ratio,
-                frameRate: result.frame_rate,
-                frameNumber: result.sample.frame_number,
-                urls: Object.fromEntries(
-                  result.urls.map(({ field, url }) => [field, url])
-                ),
-              };
-
-              store.samples.set(result.sample._id, data);
-              store.indices.set(next.current, result.sample._id);
-              next.current++;
-
-              return data;
-            });
-
-            const items = itemData.map(({ sample, aspectRatio }) => {
-              return {
-                id: sample._id,
-                aspectRatio: zoom
-                  ? zoomAspectRatio(sample, aspectRatio)
-                  : aspectRatio,
-              };
-            });
-
-            return {
-              items,
-              nextRequestKey: more ? page + 1 : null,
-            };
-          } catch (error) {
-            handleError(error);
-            throw error;
+          if (pivot.state !== "hasValue" || !pivot.contents) {
+            throw new Error("NO");
           }
+
+          const { samples } = pivot.contents;
+
+          if (!samples.edges.length) {
+            set({ items: [], nextRequestKey: null });
+            return;
+          }
+          const pivotCursor =
+            getPageQuery<DatasetPageQuery>().pageQuery.preloadedQuery.variables
+              .samplesCursor;
+          const itemData = samples.edges.map(({ node, cursor }) => {
+            const data = {
+              sample: node.sample,
+              aspectRatio: node.aspectRatio,
+              cursor,
+              urls: Object.fromEntries(
+                (node.urls || []).map(({ field, url }) => [field, url])
+              ),
+            };
+
+            store.samples.set(`${pivotCursor}/${cursor}`, data);
+            store.indices.set(next.current, `${pivotCursor}/${cursor}`);
+            next.current++;
+
+            return data;
+          });
+
+          const items = itemData.map(({ sample, aspectRatio, cursor }) => {
+            return {
+              id: `${pivotCursor}/${cursor}`,
+              aspectRatio: false
+                ? zoomAspectRatio(sample, aspectRatio)
+                : aspectRatio,
+            };
+          });
+          console.log(items);
+
+          set({
+            items,
+            nextRequestKey: null,
+          });
         },
       [modal]
     ),
