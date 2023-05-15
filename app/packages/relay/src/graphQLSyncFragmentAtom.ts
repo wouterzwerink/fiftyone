@@ -10,7 +10,7 @@ import { GraphQLTaggedNode, OperationType } from "relay-runtime";
 import { KeyType } from "relay-runtime/lib/store/readInlineData";
 import { selectorWithEffect } from "./selectorWithEffect";
 import { loadContext } from "./utils";
-import { getPageQuery, PageQuery } from "./Writer";
+import { getPageQuery, LocationState, PageQuery } from "./Writer";
 
 export type GraphQLSyncFragmentAtomOptions<K> = AtomOptions<K>;
 
@@ -19,7 +19,8 @@ export type GraphQLSyncFragmentSyncAtomOptions<T extends KeyType, K> = {
   keys?: string[];
   read?: (
     data: KeyTypeData<T>,
-    previous: KeyTypeData<T> | null
+    previous: KeyTypeData<T> | null,
+    state: LocationState
   ) => K | ((current: K) => K);
   default: K;
   selectorEffect?:
@@ -41,6 +42,10 @@ export function graphQLSyncFragmentAtom<T extends KeyType, K>(
     effects: [
       ...(options.effects || []),
       ({ setSelf, trigger }) => {
+        // recoil state should be initialized via RecoilRoot's initializeState
+        // during tests
+        if (typeof process !== "undefined" && process.env.MODE === "test")
+          return;
         if (trigger === "set") {
           return;
         }
@@ -51,12 +56,16 @@ export function graphQLSyncFragmentAtom<T extends KeyType, K>(
         let previous: null | T[" $data"] = null;
         const setter = (
           d: null | T[" $data"],
+          state: LocationState,
           int?: TransactionInterface_UNSTABLE
         ) => {
           const set = int ? (v: K) => int.set(value, v) : setSelf;
+          if (options.key === "samplesPivot") {
+            console.log(d);
+          }
           set(
             fragmentOptions.read && d !== null
-              ? fragmentOptions.read(d, previous)
+              ? fragmentOptions.read(d, previous, state)
               : d === null
               ? fragmentOptions.default
               : (d as K)
@@ -66,7 +75,7 @@ export function graphQLSyncFragmentAtom<T extends KeyType, K>(
         };
 
         const run = (
-          { data, preloadedQuery }: PageQuery<OperationType>,
+          { data, preloadedQuery, state }: PageQuery<OperationType>,
           transactionInterface?: TransactionInterface_UNSTABLE
         ): Disposable | undefined => {
           try {
@@ -81,7 +90,7 @@ export function graphQLSyncFragmentAtom<T extends KeyType, K>(
               parent = data;
               data = ctx.result.data;
             });
-            setter(data, transactionInterface);
+            setter(data, state, transactionInterface);
             disposable?.dispose();
 
             return ctx.FragmentResource.subscribe(ctx.result, () => {
@@ -90,10 +99,11 @@ export function graphQLSyncFragmentAtom<T extends KeyType, K>(
                 preloadedQuery.environment,
                 parent
               ).result.data;
-              setter(update);
+
+              setter(update, state);
             });
           } catch (e) {
-            setter(null, transactionInterface);
+            setter(null, state, transactionInterface);
             return undefined;
           }
         };

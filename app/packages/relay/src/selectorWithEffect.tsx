@@ -33,13 +33,16 @@ export function selectorWithEffect<T>(
     ...options,
     set: (...params) => {
       const key = itemKey || options.key;
-      const set = effectStore_INTERNAL.get(key);
-      if (!set) {
-        throw new Error(`No setter for selector '${key}' found`);
-      }
-      options.set instanceof Function && options.set(params[1]);
 
-      set(...params);
+      if (options.set instanceof Function) {
+        options.set(params[1]);
+      } else if (options.set) {
+        const set = effectStore_INTERNAL.get(key);
+        if (!set) {
+          throw new Error(`No setter for selector '${key}' found`);
+        }
+        set(...params);
+      }
     },
   });
 }

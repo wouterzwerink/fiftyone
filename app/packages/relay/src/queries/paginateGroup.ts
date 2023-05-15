@@ -5,7 +5,7 @@ import r from "../resolve";
 export default r(graphql`
   query paginateGroupQuery(
     $count: Int = 20
-    $cursor: String = null
+    $cursor: String
     $dataset: String!
     $view: BSONArray!
     $filter: SampleFilter!

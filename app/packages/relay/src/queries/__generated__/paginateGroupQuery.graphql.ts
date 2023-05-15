@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<feefeddeff13f06c30ffb004c35ae8f4>>
+ * @generated SignedSource<<f33629a190be2069b6079ec0b038f378>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -300,16 +300,16 @@ return {
     ]
   },
   "params": {
-    "cacheID": "f4d62000dc21792715c8929b9312a2ec",
+    "cacheID": "699a22cd9f961929031ff26ab71854ff",
     "id": null,
     "metadata": {},
     "name": "paginateGroupQuery",
     "operationKind": "query",
-    "text": "query paginateGroupQuery(\n  $count: Int = 20\n  $cursor: String = null\n  $dataset: String!\n  $view: BSONArray!\n  $filter: SampleFilter!\n) {\n  ...paginateGroup_query\n}\n\nfragment paginateGroup_query on Query {\n  samples(dataset: $dataset, view: $view, first: $count, after: $cursor, filter: $filter) {\n    total\n    edges {\n      cursor\n      node {\n        __typename\n        ... on ImageSample {\n          id\n          aspectRatio\n          sample\n          urls {\n            field\n            url\n          }\n        }\n        ... on PointCloudSample {\n          id\n          sample\n          urls {\n            field\n            url\n          }\n        }\n        ... on VideoSample {\n          id\n          aspectRatio\n          frameRate\n          sample\n          urls {\n            field\n            url\n          }\n        }\n      }\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n}\n"
+    "text": "query paginateGroupQuery(\n  $count: Int = 20\n  $cursor: String\n  $dataset: String!\n  $view: BSONArray!\n  $filter: SampleFilter!\n) {\n  ...paginateGroup_query\n}\n\nfragment paginateGroup_query on Query {\n  samples(dataset: $dataset, view: $view, first: $count, after: $cursor, filter: $filter) {\n    total\n    edges {\n      cursor\n      node {\n        __typename\n        ... on ImageSample {\n          id\n          aspectRatio\n          sample\n          urls {\n            field\n            url\n          }\n        }\n        ... on PointCloudSample {\n          id\n          sample\n          urls {\n            field\n            url\n          }\n        }\n        ... on VideoSample {\n          id\n          aspectRatio\n          frameRate\n          sample\n          urls {\n            field\n            url\n          }\n        }\n      }\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "f675c0667733228ac2427310dc518a45";
+(node as any).hash = "eaeb448d2de91a0511f960fb1eb74f2d";
 
 export default node;
