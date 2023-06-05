@@ -49,10 +49,11 @@ import * as fos from "@fiftyone/state";
 
 import FieldLabelAndInfo from "../../FieldLabelAndInfo";
 import LabelFieldFilter from "../../Filters/LabelFieldFilter";
-import { NameAndCountContainer } from "../../utils";
+import { Button, NameAndCountContainer } from "../../utils";
 import { PathEntryCounts } from "./EntryCounts";
 import RegularEntry from "./RegularEntry";
 import { makePseudoField, pathIsExpanded } from "./utils";
+import TagVisibilityControl from "./TagVisibilityControl";
 
 const FILTERS = {
   [BOOLEAN_FIELD]: BooleanFieldFilter,
@@ -276,6 +277,7 @@ const FilterableEntry = ({
 }) => {
   const theme = useTheme();
   const skeleton = useRecoilValue(fos.getSkeleton);
+  const [isFilterTag, setIsFilterTag] = React.useState(true);
   const expandedPath = useRecoilValue(fos.expandPath(path));
   const [expanded, setExpanded] = useRecoilState(
     pathIsExpanded({ modal, path: expandedPath })
@@ -306,6 +308,7 @@ const FilterableEntry = ({
 
   const onClick = useOnClick({ disabled, modal, path });
   const isLabelTag = path === "_label_tags";
+  const isTags = path === "tags" || isLabelTag;
 
   return (
     <RegularEntry
@@ -378,6 +381,7 @@ const FilterableEntry = ({
       trigger={trigger}
     >
       {expanded &&
+        !isTags &&
         data &&
         data.map(({ ftype, listField, title, ...props }) => {
           return React.createElement(FILTERS[ftype], {
@@ -388,6 +392,43 @@ const FilterableEntry = ({
             color: activeColor,
             ...props,
           });
+        })}
+      {expanded && isTags && data && (
+        <Button
+          text={isFilterTag ? "Filter Mode" : "Visibility Mode"}
+          onClick={() => {
+            setIsFilterTag((s) => !s);
+          }}
+        />
+      )}
+      {expanded &&
+        isTags &&
+        data &&
+        isFilterTag &&
+        data.map(({ ftype, listField, title, ...props }) => {
+          return React.createElement(FILTERS[ftype], {
+            key: props.path,
+            onFocus,
+            onBlur,
+            title: title || (listField ? `${LIST_FIELD}(${ftype})` : ftype),
+            color: activeColor,
+            ...props,
+          });
+        })}
+      {expanded &&
+        isTags &&
+        data &&
+        !isFilterTag &&
+        data.map((props) => {
+          console.info("props", props);
+          return (
+            <TagVisibilityControl
+              key={props.path}
+              cy-data={`tag-visibility-control-${props.path}`}
+              color={activeColor}
+              {...props}
+            />
+          );
         })}
     </RegularEntry>
   );
