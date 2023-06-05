@@ -110,7 +110,9 @@ const TagVisibilityControl = (props) => {
   const labels = useRecoilValue(
     fos.labelTagCounts({ modal: props.modal, extended: false })
   );
-  const data = Object.entries(labels).map(([label, _]) => label);
+  const data = Object.entries(labels)
+    .filter(([_, count]) => count > 0)
+    .map(([label, _]) => label);
   console.info(labels);
   const ITEM_HEIGHT = 48;
   const ITEM_PADDING_TOP = 8;
@@ -137,6 +139,7 @@ const TagVisibilityControl = (props) => {
             placeholder="Set tag visibility"
           />
         )}
+        size="small"
         sx={{
           height: "100%",
           marginTop: "10px",
