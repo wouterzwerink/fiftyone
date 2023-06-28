@@ -4,6 +4,8 @@ import {
   selectorFamily,
   SetRecoilState,
 } from "recoil";
+import * as fos from "../atoms";
+import * as visibilityAtoms from "../fieldVisibility";
 import * as filterAtoms from "../filters";
 
 export interface StringFilter {
@@ -26,6 +28,19 @@ const getFilter = (
     onlyMatch: true,
     _CLS: "str",
     ...get(filterAtoms.filter({ modal, path })),
+  } as StringFilter;
+};
+
+const getVisibility = (
+  get: GetRecoilValue,
+  modal: boolean,
+  path: string
+): StringFilter => {
+  return {
+    values: [],
+    exclude: false,
+    _CLS: "str",
+    ...get(visibilityAtoms.visibility({ modal, path })),
   } as StringFilter;
 };
 
@@ -58,6 +73,30 @@ const setFilter = (
   set(filterAtoms.filter({ modal, path }), filter);
 };
 
+const setVisibility = (
+  get: GetRecoilValue,
+  set: SetRecoilState,
+  modal: boolean,
+  path: string,
+  key: string,
+  value: boolean | (string | null)[] | DefaultValue
+) => {
+  let visibility = {
+    ...getVisibility(get, modal, path),
+    [key]: value,
+  };
+
+  if (visibility.values.length === 0) {
+    visibility.exclude = false;
+  }
+
+  if (meetsDefault(visibility)) {
+    visibility = null;
+  }
+
+  set(visibilityAtoms.visibility({ modal, path }), visibility);
+};
+
 // updates the string values in the filter
 export const stringSelectedValuesAtom = selectorFamily<
   (string | null)[],
@@ -66,12 +105,20 @@ export const stringSelectedValuesAtom = selectorFamily<
   key: "stringSelectedValuesAtom",
   get:
     ({ modal, path }) =>
-    ({ get }) =>
-      getFilter(get, modal, path).values,
+    ({ get }) => {
+      const isFiltering = get(fos.isSidebarFilterMode);
+      return isFiltering
+        ? getFilter(get, modal, path).values
+        : getVisibility(get, modal, path).values;
+    },
   set:
     ({ modal, path }) =>
-    ({ get, set }, value) =>
-      setFilter(get, set, modal, path, "values", value),
+    ({ get, set }, value) => {
+      const isFiltering = get(fos.isSidebarFilterMode);
+      return isFiltering
+        ? setFilter(get, set, modal, path, "values", value)
+        : setVisibility(get, set, modal, path, "values", value);
+    },
 });
 
 // updates if the filter is excluding or not
@@ -82,12 +129,19 @@ export const stringExcludeAtom = selectorFamily<
   key: "stringExclude",
   get:
     ({ modal, path }) =>
-    ({ get }) =>
-      getFilter(get, modal, path).exclude,
+    ({ get }) => {
+      const isFiltering = get(fos.isSidebarFilterMode);
+      return isFiltering
+        ? getFilter(get, modal, path).exclude
+        : getVisibility(get, modal, path).exclude;
+    },
   set:
     ({ modal, path }) =>
     ({ get, set }, value) => {
-      setFilter(get, set, modal, path, "exclude", value);
+      const isFiltering = get(fos.isSidebarFilterMode);
+      return isFiltering
+        ? setFilter(get, set, modal, path, "exclude", value)
+        : setVisibility(get, set, modal, path, "exclude", value);
     },
 });
 
@@ -155,31 +209,31 @@ export const string = selectorFamily<
 });
 
 export const listString = selectorFamily<
-(value: string | null) => boolean,
-{ modal: boolean; path: string }
+  (value: string | null) => boolean,
+  { modal: boolean; path: string }
 >({
-key: "stringFilterForListField",
-get:
-  (params) =>
-  ({ get }) => {
-    if (!get(filterAtoms.filter(params))) {
-      return (value) => true;
-    }
-    const isMatching = get(isMatchingAtom(params));
-    if (isMatching) {
-      return (value) => true;
-    }
+  key: "stringFilterForListField",
+  get:
+    (params) =>
+    ({ get }) => {
+      if (!get(filterAtoms.filter(params))) {
+        return (value) => true;
+      }
+      const isMatching = get(isMatchingAtom(params));
+      if (isMatching) {
+        return (value) => true;
+      }
 
-    const exclude = get(stringExcludeAtom(params));
-    const values = get(stringSelectedValuesAtom({ ...params }));
-    const none = values.includes(null);
+      const exclude = get(stringExcludeAtom(params));
+      const values = get(stringSelectedValuesAtom({ ...params }));
+      const none = values.includes(null);
 
-    return (value) => {
-      const c1 = values.every(v => value?.includes(v));
-      const c2 = (none && NONE.has(value));
-      const c3 = value;
-      const r = (c1 || c2) && c3;
-      return exclude ? !r : r;
-    };
-  },
+      return (value) => {
+        const c1 = values.every((v) => value?.includes(v));
+        const c2 = none && NONE.has(value);
+        const c3 = value;
+        const r = (c1 || c2) && c3;
+        return exclude ? !r : r;
+      };
+    },
 });
