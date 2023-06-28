@@ -45,6 +45,7 @@ const Wrapper = ({
   const isFilterMode = useRecoilValue(fos.isSidebarFilterMode);
   const [selected, setSelected] = useRecoilState(selectedValuesAtom);
   const visibility = useRecoilValue(fieldVisibility);
+  const filter = useRecoilValue(fos.filters);
   const selectedSet = new Set(selected);
   const setExcluded = excludeAtom ? useSetRecoilState(excludeAtom) : null;
   const setOnlyMatch = onlyMatchAtom ? useSetRecoilState(onlyMatchAtom) : null;
@@ -109,6 +110,7 @@ const Wrapper = ({
     );
   }
   console.info(visibility);
+  console.info(filter);
   return (
     <>
       {allValues.sort(nullSort(sorting)).map(({ value, count }) => (
