@@ -144,7 +144,7 @@ const Wrapper = ({
       ))}
       {Boolean(selectedSet.size) && (
         <>
-          {
+          {isFilterMode && (
             <FilterOption
               nestedField={nestedField}
               shouldNotShowExclude={Boolean(shouldNotShowExclude)}
@@ -157,7 +157,7 @@ const Wrapper = ({
               path={path}
               isKeyPointLabel={isKeyPoints}
             />
-          }
+          )}
           <Button
             text={"Reset"}
             color={color}
