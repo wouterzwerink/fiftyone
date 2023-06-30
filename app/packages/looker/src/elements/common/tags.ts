@@ -35,6 +35,7 @@ import {
   prettify,
 } from "./util";
 
+import _ from "lodash";
 import { lookerTags } from "./tags.module.css";
 
 interface TagData {
@@ -53,6 +54,7 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
   private colorByValue: boolean;
   private colorSeed: number;
   private playing = false;
+  private fieldVisibility: object;
 
   createHTMLElement() {
     const container = document.createElement("div");
@@ -67,7 +69,14 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
   renderSelf(
     {
       config: { fieldSchema },
-      options: { activePaths, coloring, timeZone, customizeColorSetting },
+      options: {
+        activePaths,
+        coloring,
+        timeZone,
+        customizeColorSetting,
+        filter,
+        fieldVisibility,
+      },
       playing,
     }: Readonly<State>,
     sample: Readonly<Sample>
@@ -83,6 +92,7 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
         this.colorByValue === (coloring.by === "value") &&
         arraysAreEqual(this.colorPool, coloring.pool as string[]) &&
         compareObjectArrays(this.customizedColors, customizeColorSetting) &&
+        _.isEqual(this.fieldVisibility, fieldVisibility) &&
         this.colorSeed === coloring.seed) ||
       !sample
     ) {
@@ -113,7 +123,6 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
       },
       [INT_FIELD]: (path, value: number) => {
         const v = prettyNumber(value);
-
         return {
           path,
           value: v,
@@ -158,7 +167,6 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
       },
       [FLOAT_FIELD]: (path: string, value: number) => {
         const v = prettyNumber(value);
-
         return {
           path,
           value: v,
@@ -384,6 +392,7 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
     this.element.innerHTML = "";
     this.customizedColors = customizeColorSetting;
     this.colorPool = coloring.pool as string[];
+    this.fieldVisibility = fieldVisibility;
 
     elements.forEach(({ path, value, color, title }) => {
       const div = document.createElement("div");
@@ -394,7 +403,9 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
       div.title = title;
       div.style.backgroundColor = color;
       div.setAttribute("data-cy", `tag-${path}`);
-      this.element.appendChild(div);
+      if (filter(path, value)) {
+        this.element.appendChild(div);
+      }
     });
 
     return this.element;
