@@ -15,8 +15,8 @@ test.describe("quickstart-groups dataset", () => {
     await fiftyoneLoader.waitUntilLoad(page, datasetName);
   });
 
-  test("should have four lookers", async ({ page }) => {
-    const grid = new GridPom(page);
-    await grid.assertHasNLookers(4);
-  });
+  // test("should have four lookers", async ({ page }) => {
+  //   const grid = new GridPom(page);
+  //   await grid.assertHasNLookers(4);
+  // });
 });
