@@ -281,31 +281,35 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
       if (path === "tags") {
         if (Array.isArray(sample.tags)) {
           sample.tags.forEach((tag) => {
-            const v = coloring.by === "value" ? tag : "tags";
-            elements.push({
-              color: getColorFromOptions({
-                coloring,
-                path,
-                param: tag,
-                customizeColorSetting,
-                labelDefault: false,
-              }),
-              title: tag,
-              value: tag,
-              path: v,
-            });
+            if (filter(path, tag)) {
+              const v = coloring.by === "value" ? tag : "tags";
+              elements.push({
+                color: getColorFromOptions({
+                  coloring,
+                  path,
+                  param: tag,
+                  customizeColorSetting,
+                  labelDefault: false,
+                }),
+                title: tag,
+                value: tag,
+                path: v,
+              });
+            }
           });
         }
       } else if (path === "_label_tags") {
         Object.entries(sample._label_tags ?? {}).forEach(([tag, count]) => {
           const value = `${tag}: ${count}`;
           const v = coloring.by === "value" ? tag : path;
-          elements.push({
-            color: getColor(coloring.pool, coloring.seed, v),
-            title: value,
-            value: value,
-            path: v,
-          });
+          if (filter(path, tag)) {
+            elements.push({
+              color: getColor(coloring.pool, coloring.seed, v),
+              title: value,
+              value: value,
+              path: v,
+            });
+          }
         });
       } else {
         const [field, value, list] = getFieldAndValue(
@@ -350,10 +354,12 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
           if (path.startsWith("frames.")) continue;
           const classifications = LABEL_LISTS.includes(field.embeddedDocType);
           if (classifications) {
-            pushList(
-              LABEL_RENDERERS[field.embeddedDocType],
-              value?.classifications
-            );
+            if (filter(path, value)) {
+              pushList(
+                LABEL_RENDERERS[field.embeddedDocType],
+                value?.classifications
+              );
+            }
           } else {
             // remove undefined classifications - can show up as None
             const objVal = value as Object;
@@ -363,7 +369,11 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
             ) {
               continue;
             }
-            elements.push(LABEL_RENDERERS[field.embeddedDocType](path, value));
+            if (filter(path, value)) {
+              elements.push(
+                LABEL_RENDERERS[field.embeddedDocType](path, value)
+              );
+            }
           }
           continue;
         }
@@ -380,7 +390,17 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
           field.ftype === LIST_FIELD &&
           PRIMITIVE_RENDERERS[field.subfield]
         ) {
-          pushList(PRIMITIVE_RENDERERS[field.subfield], value);
+          // there may be visibility settings
+          const visibleValue = [];
+          value?.forEach((v) => {
+            console.info("v", v);
+            console.info("path");
+            if (filter(path, v)) {
+              visibleValue.push(v);
+            }
+          });
+          console.info("visibleValue", visibleValue, value);
+          pushList(PRIMITIVE_RENDERERS[field.subfield], visibleValue);
           continue;
         }
       }
@@ -403,9 +423,9 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
       div.title = title;
       div.style.backgroundColor = color;
       div.setAttribute("data-cy", `tag-${path}`);
-      if (filter(path, value)) {
-        this.element.appendChild(div);
-      }
+      // if (filter(path, value)) {
+      this.element.appendChild(div);
+      // }
     });
 
     return this.element;
