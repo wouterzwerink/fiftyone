@@ -14,7 +14,7 @@ import {
   useResetRecoilState,
   useSetRecoilState,
 } from "recoil";
-import { InputDiv } from "./utils";
+import { FilterInputDiv } from "./utils";
 
 const Filter = ({ modal }: { modal: boolean }) => {
   const theme = useTheme();
@@ -46,7 +46,7 @@ const Filter = ({ modal }: { modal: boolean }) => {
   );
 
   return (
-    <InputDiv>
+    <FilterInputDiv>
       <input
         type={"text"}
         placeholder={"FILTER"}
@@ -137,7 +137,7 @@ const Filter = ({ modal }: { modal: boolean }) => {
           )}
         </Box>
       )}
-    </InputDiv>
+    </FilterInputDiv>
   );
 };
 
