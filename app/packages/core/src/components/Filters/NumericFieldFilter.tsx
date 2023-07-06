@@ -10,14 +10,14 @@ import styled from "styled-components";
 
 import * as fos from "@fiftyone/state";
 
-import RangeSlider from "../Common/RangeSlider";
-import Checkbox from "../Common/Checkbox";
-import { Button } from "../utils";
 import { DATE_FIELD, DATE_TIME_FIELD, FLOAT_FIELD } from "@fiftyone/utilities";
 import { formatDateTime } from "../../utils/generic";
-import withSuspense from "./withSuspense";
+import Checkbox from "../Common/Checkbox";
+import RangeSlider from "../Common/RangeSlider";
 import FieldLabelAndInfo from "../FieldLabelAndInfo";
+import { Button } from "../utils";
 import FilterOption from "./categoricalFilter/filterOption/FilterOption";
+import withSuspense from "./withSuspense";
 
 const NamedRangeSliderContainer = styled.div`
   margin: 3px;
@@ -313,23 +313,23 @@ const NumericFieldFilter = ({
             valueName={field?.name ?? ""}
             color={color}
             modal={modal}
+            path={path}
             isKeyPointLabel={isKeyPoints}
           />
         )}
-        {isFiltered ||
-          (hasVisibilitySetting && (
-            <Button
-              text={"Reset"}
-              color={color}
-              onClick={initializeSettings}
-              style={{
-                margin: "0.25rem -0.5rem",
-                height: "2rem",
-                borderRadius: 0,
-                textAlign: "center",
-              }}
-            ></Button>
-          ))}
+        {(isFiltered || hasVisibilitySetting) && (
+          <Button
+            text={"Reset"}
+            color={color}
+            onClick={initializeSettings}
+            style={{
+              margin: "0.25rem -0.5rem",
+              height: "2rem",
+              borderRadius: 0,
+              textAlign: "center",
+            }}
+          ></Button>
+        )}
       </RangeSliderContainer>
     </NamedRangeSliderContainer>
   );

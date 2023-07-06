@@ -381,7 +381,8 @@ export class TagsElement<State extends BaseState> extends BaseElement<State> {
         if (field && PRIMITIVE_RENDERERS[field.ftype]) {
           list
             ? pushList(PRIMITIVE_RENDERERS[field.ftype], value)
-            : elements.push(PRIMITIVE_RENDERERS[field.ftype](path, value));
+            : filter(path, value) &&
+              elements.push(PRIMITIVE_RENDERERS[field.ftype](path, value));
           continue;
         }
 
