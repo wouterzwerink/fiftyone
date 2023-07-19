@@ -175,14 +175,14 @@ class ColorScheme(EmbeddedDocument):
             fields=[
                 {
                     "path": "ground_truth",
-                    "fieldColor": "#ff00ff",
-                    "colorByAttribute": "label",
-                    "valueColors": [{"value": "dog", "color": "yellow"}],
+                    "field_color": "#ff00ff",
+                    "color_by_attribute": "label",
+                    "value_colors": [{"value": "dog", "color": "yellow"}],
                 }
             ],
             label_tags={
-                "fieldColor": "#00ffff",
-                "valueColors": [
+                "field_color": "#00ffff",
+                "value_colors": [
                     {"value": "correct", "color": "#ff00ff"},
                     {"value": "mistake", "color": "#00ff00"},
                 ]
@@ -198,17 +198,17 @@ class ColorScheme(EmbeddedDocument):
 
             -   `path` (required): the fully-qualified path to the field you're
                 customizing
-            -   `fieldColor` (optional): a color to assign to the field in the
+            -   `field_color` (optional): a color to assign to the field in the
                 App sidebar
-            -   `colorByAttribute` (optional): the attribute to use to assign
+            -   `color_by_Attribute` (optional): the attribute to use to assign
                 per-value colors. Only applicable when the field is an embedded
                 document
-            -   `valueColors` (optional): a list of dicts specifying colors to
+            -   `value_colors` (optional): a list of dicts specifying colors to
                 use for individual values of this field
         label_tags (None): an optional dict specifying custom colors for label tags
             with the following keys:
-            -    `fieldColor` (optional): a color to assign to all label tags
-            -    `valueColors` (optional): a list of dicts specifying colors to
+            -    `field_color` (optional): a color to assign to all label tags
+            -    `value_colors` (optional): a list of dicts specifying colors to
             specific label tags
     """
 

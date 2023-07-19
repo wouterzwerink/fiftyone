@@ -13,6 +13,7 @@ import {
 } from "../recoil";
 import { DEFAULT_APP_COLOR_SCHEME } from "../utils";
 import useSendEvent from "./useSendEvent";
+import { toSnakeCase } from "@fiftyone/utilities";
 
 const useSetSessionColorScheme = () => {
   const send = useSendEvent(true);
@@ -68,6 +69,8 @@ const useSetSessionColorScheme = () => {
           colorScheme = combined;
         }
 
+        console.info(toSnakeCase(colorScheme));
+
         return send(async (session) => {
           commit({
             onError,
@@ -77,7 +80,7 @@ const useSetSessionColorScheme = () => {
               session,
               dataset: await snapshot.getPromise(datasetName),
               stages: await snapshot.getPromise(view),
-              colorScheme: colorScheme,
+              colorScheme: toSnakeCase(colorScheme),
               saveToApp: saveToApp,
             },
           });

@@ -418,7 +418,7 @@ export const Looker3d = () => {
           return { ...l, color, id: l._id };
         })
         .filter((l) => pathFilter(l.path.join("."), l)),
-    [coloring, getColor, pathFilter, sampleMap, selectedLabels]
+    [coloring, getColor, pathFilter, colorScheme, sampleMap, selectedLabels]
   );
 
   const [cuboidOverlays, polylineOverlays] = useMemo(() => {
