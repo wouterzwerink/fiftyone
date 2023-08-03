@@ -1,5 +1,4 @@
 import * as fos from "@fiftyone/state";
-import { Field } from "@fiftyone/utilities";
 import CloseIcon from "@mui/icons-material/Close";
 import React, { Fragment, useCallback, useRef, useState } from "react";
 import ReactDOM from "react-dom";
@@ -138,8 +137,10 @@ const ColorModal = () => {
                   <SidebarList />
                   <Display>
                     {field === ACTIVE_FIELD.global && <GlobalSetting />}
-                    Note that in this panel the color pool is the only savable
-                    option for now.
+                    <Typography color={theme.text.primary} fontSize="0.9rem">
+                      Note: In this panel the color pool is the only savable
+                      option for now.
+                    </Typography>
                     {field === ACTIVE_FIELD.json && <JSONViewer />}
                     {typeof field !== "string" && field && (
                       <FieldSetting prop={activeColorModalField} />

@@ -35,9 +35,9 @@ const GlobalSetting: React.FC = ({}) => {
         </SectionWrapper>
         <ShuffleColor />
         <LabelTitle>Color pool</LabelTitle>
-        <Typography fontSize="1rem" pb={0.5}>
-          Pool of colors from which otherwise unconfigured fields/values are
-          randomly assigned colors.
+        <Typography fontSize="0.9rem" pb={0.5} style={{ marginTop: "-8px" }}>
+          A pool of colors from which colors are randomly assigned for otherwise
+          unspecified fields/values
         </Typography>
         <SectionWrapper>
           <ColorPalette />
