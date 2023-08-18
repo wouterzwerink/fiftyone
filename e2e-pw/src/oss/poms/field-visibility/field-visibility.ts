@@ -1,5 +1,15 @@
 import { expect, Locator, Page } from "src/oss/fixtures";
 
+const ALL_FIELDS_PATH = [
+  "uniqueness",
+  "predictions",
+  "ground_truth",
+  "filepath",
+  "id",
+  "metadata",
+  "tags",
+];
+
 export class FieldVisibilityPom {
   readonly page: Page;
   readonly assert: FieldVisibilityAsserter;
@@ -39,6 +49,18 @@ export class FieldVisibilityPom {
     await this.submitFieldVisibilityChanges();
   }
 
+  allCheckboxes(fieldPaths: string[], checked: boolean = true) {
+    const res = [];
+    for (let i = 0; i < fieldPaths.length; i++) {
+      res.push(
+        this.page
+          .getByTestId(`schema-selection-${fieldPaths[i]}`)
+          .getByRole("checkbox", { checked })
+      );
+    }
+    return res;
+  }
+
   async submitFieldVisibilityChanges() {
     await this.applyBtn().click();
   }
@@ -72,6 +94,17 @@ export class FieldVisibilityPom {
 
 class FieldVisibilityAsserter {
   constructor(private readonly svp: FieldVisibilityPom) {}
+
+  async verifyAllFieldsAreSelected() {
+    const checkBoxes = this.svp.allCheckboxes(ALL_FIELDS_PATH);
+    checkBoxes.forEach(async (checkBox) => {
+      await expect(checkBox).toBeChecked();
+    });
+  }
+
+  async assertModalIsOpen() {
+    await expect(this.svp.modalContainer()).toBeVisible();
+  }
 
   async assertFieldInSidebar(fieldName: string) {
     await expect(this.svp.sidebarField(fieldName)).toBeVisible();

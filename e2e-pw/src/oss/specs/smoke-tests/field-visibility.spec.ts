@@ -23,6 +23,12 @@ test.describe("field visibility", () => {
 
   test("field visibility modal opens", async ({ fieldVisibility }) => {
     await fieldVisibility.openFieldVisibilityModal();
+    await fieldVisibility.assert.assertModalIsOpen();
+  });
+
+  test("by default all fields are selected", async ({ fieldVisibility }) => {
+    await fieldVisibility.openFieldVisibilityModal();
+    await fieldVisibility.assert.verifyAllFieldsAreSelected();
   });
 
   test("sidebar group is hidden if all its fields are hidden using field visibility", async ({
