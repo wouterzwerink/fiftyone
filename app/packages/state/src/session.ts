@@ -27,6 +27,7 @@ export interface Session {
   sessionSpaces: SpaceNodeJSON;
   selectedFields?: State.Stage;
   colorScheme: ColorSchemeInput;
+  visiblePaths: string[];
 }
 
 export const SESSION_DEFAULT: Session = {
@@ -37,6 +38,7 @@ export const SESSION_DEFAULT: Session = {
   selectedLabels: [],
   sessionSpaces: SPACES_DEFAULT,
   colorScheme: { colorPool: [], fields: [] },
+  visiblePaths: [],
 };
 
 type SetterKeys = keyof Omit<

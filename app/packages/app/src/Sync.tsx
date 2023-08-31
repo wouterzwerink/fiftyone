@@ -8,6 +8,8 @@ import {
   setGroupSlice,
   setGroupSliceMutation,
   setSelected,
+  setVisiblePaths,
+  setVisiblePathsMutation,
   setSelectedLabels,
   setSelectedLabelsMutation,
   setSelectedMutation,
@@ -55,6 +57,7 @@ enum Events {
   SET_GROUP_SLICE = "set_group_slice",
   STATE_UPDATE = "state_update",
   INIT = "init",
+  VISIBLE_PATHS = "visible_paths",
 }
 
 enum AppReadyState {
@@ -130,6 +133,10 @@ const Sync = ({ children }: { children?: React.ReactNode }) => {
             case Events.SELECT_SAMPLES:
               setter("selectedSamples", JSON.parse(msg.data).sample_ids);
               break;
+            case Events.VISIBLE_PATHS:
+              console.log("VISIBLE_PATHS", JSON.parse(msg.data));
+              setter("visiblePaths", JSON.parse(msg.data).visible_paths);
+              break;
             case Events.SET_SPACES:
               setter("sessionSpaces", JSON.parse(msg.data).spaces);
               break;
@@ -194,6 +201,7 @@ const Sync = ({ children }: { children?: React.ReactNode }) => {
           Events.SET_COLOR_SCHEME,
           Events.SET_SPACES,
           Events.STATE_UPDATE,
+          Events.VISIBLE_PATHS,
         ],
       }
     );
@@ -474,14 +482,21 @@ const WRITE_HANDLERS: {
       },
     });
   },
-  selectedFields: (router, _, selectedFields, __) => {
-    router.history.replace(
-      `${router.history.location.pathname}${router.history.location.search}`,
-      {
-        ...router.get().state,
-        extendedStages: selectedFields ? [selectedFields] : [],
-      }
-    );
+  selectedFields: (router, environment, selectedFields, subscription) => {
+    commitMutation<setVisiblePathsMutation>(environment, {
+      mutation: setVisiblePaths,
+      variables: {
+        subscription,
+        visiblePaths: selectedFields,
+      },
+    });
+    // router.history.replace(
+    //   `${router.history.location.pathname}${router.history.location.search}`,
+    //   {
+    //     ...router.get().state,
+    //     extendedStages: selectedFields ? [selectedFields] : [],
+    //   }
+    // );
   },
 };
 
