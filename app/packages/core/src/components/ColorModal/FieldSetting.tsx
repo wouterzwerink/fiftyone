@@ -4,6 +4,7 @@ import * as fos from "@fiftyone/state";
 import {
   FLOAT_FIELD,
   NOT_VISIBLE_LIST,
+  SEGMENTATION,
   VALID_MASK_TYPES,
 } from "@fiftyone/utilities";
 import { Divider } from "@mui/material";
@@ -110,7 +111,10 @@ const FieldSetting = ({ path }: { path: string }) => {
   const isNoShowType = NOT_VISIBLE_LIST.some((t) => field?.ftype?.includes(t));
   const isTypeValueSupported =
     !isMaskType && !isNoShowType && !(field.ftype == FLOAT_FIELD);
+
+  // segmentation uses default mask target and mask target. cannot set field color.
   const isTypeFieldSupported = !isNoShowType;
+
   // non video frames. field expanded path
 
   const onChangeFieldColor = useCallback(
