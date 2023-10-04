@@ -85,6 +85,7 @@ const ColorFooter: React.FC = () => {
                     ...colorScheme,
                     fields: colorScheme.fields || [],
                     colorPool: colorScheme.colorPool || [],
+                    labelTags: colorScheme.labelTags || {},
                   },
                 },
               });
