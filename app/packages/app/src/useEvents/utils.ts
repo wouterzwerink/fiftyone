@@ -18,6 +18,7 @@ export const ensureColorScheme = (
     colorPool: colorScheme.colorPool || defaultValue.colorPool,
     colorBy: colorScheme.colorBy || defaultValue.colorBy,
     fields: colorScheme.fields as ColorSchemeInput["fields"],
+    labelTags: colorScheme.labelTags as ColorSchemeInput["labelTags"],
     multicolorKeypoints:
       colorScheme.multicolorKeypoints || colorScheme.multicolorKeypoints,
     opacity: colorScheme.opacity || defaultValue.opacity,
