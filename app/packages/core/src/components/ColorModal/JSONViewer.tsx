@@ -11,6 +11,7 @@ import { COLOR_SCHEME } from "../../utils/links";
 import { Button } from "../utils";
 import { SectionWrapper } from "./ShareStyledDiv";
 import {
+  simplifyColorscale,
   validateJSONSetting,
   validateLabelTags,
   validateMaskColor,
@@ -34,6 +35,7 @@ const JSONViewer: React.FC = () => {
       defaultMaskTargetsColors: validateMaskColor(
         colorScheme.defaultMaskTargetsColors
       ),
+      colorscale: simplifyColorscale(colorScheme?.colorscale ?? []),
     };
   }, [colorScheme]);
 

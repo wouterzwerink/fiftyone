@@ -1,9 +1,6 @@
-import {
-  ColorscaleInput,
-  ColorscaleListInput,
-  MaskColorInput,
-} from "@fiftyone/relay";
+import { ColorscaleInput, ColorscaleListInput } from "@fiftyone/relay";
 import * as fos from "@fiftyone/state";
+import { cloneDeep } from "lodash";
 import React, { useCallback, useEffect, useMemo } from "react";
 import {
   DefaultValue,
@@ -11,18 +8,13 @@ import {
   useRecoilState,
   useRecoilValue,
 } from "recoil";
-import Checkbox from "../../Common/Checkbox";
-import Input from "../../Common/Input";
 import RadioGroup from "../../Common/RadioGroup";
-import { activeColorPath } from "../state";
-import {
-  getRGBColorFromPool,
-  isValidFloatInput,
-  namedColorScales,
-} from "../utils";
-import { ControlGroupWrapper, FieldCHILD_STYLE } from "../ShareStyledDiv";
+import { FieldCHILD_STYLE } from "../ShareStyledDiv";
+import { namedColorScales } from "../colorscaleConstants";
 import ManualColorScaleList from "../controls/ManualColorScaleList";
-import { cloneDeep } from "lodash";
+import NamedColorScaleSelection from "../controls/NamedColorScaleSelection";
+import { activeColorPath } from "../state";
+import { getRGBColorFromPool, isValidFloatInput } from "../utils";
 
 const colorscaleSetting = selectorFamily<
   Omit<ColorscaleInput, "path"> | undefined,
@@ -92,10 +84,10 @@ const Colorscale: React.FC = () => {
     [colorScheme, activePath]
   );
 
-  const [input, setInput] = React.useState(colorscaleValues?.name ?? "");
+  // const [input, setInput] = React.useState(colorscaleValues?.name ?? "");
   const [tab, setTab] = React.useState(
     Boolean(
-      (setting?.name || setting?.name !== "") &&
+      (!setting?.name || setting?.name == "") &&
         setting?.list &&
         setting?.list.length > 0
     )
@@ -108,17 +100,16 @@ const Colorscale: React.FC = () => {
     color: getRGBColorFromPool(colorScheme.colorPool),
   };
 
-  const onBlurName = useCallback((value: string) => {
+  const onSyncUpdateName = useCallback((value: string) => {
     // validate name is a plotly named colorscale
     // we convert the input to correct cases
-
-    if (namedColorScales.includes(value.toLowerCase())) {
-      setSetting({ ...colorscaleValues, name: value.toLowerCase() });
+    if (namedColorScales.includes(value)) {
+      setSetting({ ...colorscaleValues, name: value });
     } else {
-      setInput("invalid colorscale name");
-      setTimeout(() => {
-        setInput(colorscaleValues?.name || "");
-      }, 1000);
+      // setInput("invalid colorscale name");
+      // setTimeout(() => {
+      //   setInput(colorscaleValues?.name || "");
+      // }, 1000);
     }
   }, []);
 
@@ -166,9 +157,9 @@ const Colorscale: React.FC = () => {
     }
   }, [tab]);
 
-  useEffect(() => {
-    setInput(colorscaleValues?.name ?? "");
-  }, [colorscaleValues.name]);
+  // useEffect(() => {
+  //   setInput(colorscaleValues?.name ?? "");
+  // }, [colorscaleValues.name]);
 
   useEffect(() => {
     if (!setting) {
@@ -187,8 +178,6 @@ const Colorscale: React.FC = () => {
     }
   }, [setting]);
 
-  console.info(colorscaleValues);
-
   return (
     <div>
       <RadioGroup
@@ -202,7 +191,15 @@ const Colorscale: React.FC = () => {
       {tab === "name" && (
         <div>
           Use a named plotly colorscale:
-          <Input
+          <NamedColorScaleSelection
+            value={setting?.name}
+            onSyncUpdate={onSyncUpdateName}
+            style={{
+              width: "50%",
+              margin: 3,
+            }}
+          />
+          {/* <Input
             value={input}
             setter={(v) => setInput(v)}
             placeholder="(e.g. viridis, rdbu)"
@@ -212,7 +209,7 @@ const Colorscale: React.FC = () => {
               width: 250,
               margin: 3,
             }}
-          />
+          /> */}
         </div>
       )}
       {tab === "list" && (

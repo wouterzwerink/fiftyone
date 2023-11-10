@@ -1,12 +1,12 @@
 import { isValidColor } from "@fiftyone/looker/src/overlays/util";
 import {
   ColorSchemeInput,
+  ColorscaleInput,
   ColorscaleListInput,
   MaskColorInput,
 } from "@fiftyone/relay";
-import { isEmpty, xor } from "lodash";
 import colorString from "color-string";
-import { RGB } from "@fiftyone/utilities";
+import { isEmpty, xor } from "lodash";
 
 // Masataka Okabe and Kei Ito have proposed a palette of 8 colors on their
 // website Color Universal Design (CUD). This palette is a “Set of colors that
@@ -161,103 +161,6 @@ export const convertToRGB = (color: string) => {
   return colorString.to.rgb(rgb);
 };
 
-export const namedColorScales = [
-  "aggrnyl",
-  "agsunset",
-  "blackbody",
-  "bluered",
-  "blues",
-  "blugrn",
-  "bluyl",
-  "brwnyl",
-  "bugn",
-  "bupu",
-  "burg",
-  "burgyl",
-  "cividis",
-  "darkmint",
-  "electric",
-  "emrld",
-  "gnbu",
-  "greens",
-  "greys",
-  "hot",
-  "inferno",
-  "jet",
-  "magenta",
-  "magma",
-  "mint",
-  "orrd",
-  "oranges",
-  "oryel",
-  "peach",
-  "pinkyl",
-  "plasma",
-  "plotly3",
-  "pubu",
-  "pubugn",
-  "purd",
-  "purp",
-  "purples",
-  "purpor",
-  "rainbow",
-  "rdbu",
-  "rdpu",
-  "redor",
-  "reds",
-  "sunset",
-  "sunsetdark",
-  "teal",
-  "tealgrn",
-  "turbo",
-  "viridis",
-  "ylgn",
-  "ylgnbu",
-  "ylorbr",
-  "ylorrd",
-  "algae",
-  "amp",
-  "deep",
-  "dense",
-  "gray",
-  "haline",
-  "ice",
-  "matter",
-  "solar",
-  "speed",
-  "tempo",
-  "thermal",
-  "turbid",
-  "armyrose",
-  "brbg",
-  "earth",
-  "fall",
-  "geyser",
-  "prgn",
-  "piyg",
-  "picnic",
-  "portland",
-  "puor",
-  "rdgy",
-  "rdylbu",
-  "rdylgn",
-  "spectral",
-  "tealrose",
-  "temps",
-  "tropic",
-  "balance",
-  "curl",
-  "delta",
-  "oxy",
-  "edge",
-  "hsv",
-  "icefire",
-  "phase",
-  "twilight",
-  "mrybm",
-  "mygbm",
-];
-
 export const isValidMaskInput = (input: MaskColorInput[]) => {
   let result = true;
   input.forEach((item: MaskColorInput) => {
@@ -276,4 +179,16 @@ export const isValidFloatInput = (input: ColorscaleListInput[]) => {
     }
   });
   return result;
+};
+
+// on Json viewer, do not display the rgb results of colorscale
+export const simplifyColorscale = (input: ColorscaleInput[]) => {
+  if (!input || input.length == 0) {
+    return null;
+  }
+  return input.map((x) => ({
+    path: x.path,
+    name: x.name,
+    list: x.list,
+  }));
 };
