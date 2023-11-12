@@ -160,6 +160,7 @@ class SetColorScheme:
         await dispatch_event(
             subscription, fose.SetColorScheme(color_scheme=color_scheme)
         )
+        # return updated colorscheme (add a unique id to the colorscheme) with colorscale
         return True
 
     @gql.field
