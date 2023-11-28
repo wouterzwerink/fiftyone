@@ -22,6 +22,22 @@ export const colorBlindFriendlyPalette = [
   "#cc79a7", // reddish purple
 ];
 
+export const classicPalette = [
+  "#ee0000",
+  "#ee6600",
+  "#993300",
+  "#996633",
+  "#999900",
+  "#009900",
+  "#003300",
+  "#009999",
+  "#000099",
+  "#0066ff",
+  "#6600ff",
+  "#cc33cc",
+  "#777799",
+];
+
 export enum ACTIVE_FIELD {
   JSON = "JSON editor",
   GLOBAL = "Global settings",

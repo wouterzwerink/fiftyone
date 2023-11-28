@@ -178,8 +178,8 @@ class ColorScheme(EmbeddedDocument):
                 "#ff0000",
                 "#00ff00",
                 "#0000ff",
-                "pink",
-                "yellowgreen",
+                "#E08DAC",
+                "#6A7FDB",
             ],
             fields=[
                 {

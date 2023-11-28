@@ -67,19 +67,13 @@ RC_INSTALL = "rc" in VERSION
 
 # App configuration
 DEFAULT_APP_COLOR_POOL = [
-    "#ee0000",
-    "#ee6600",
-    "#993300",
-    "#996633",
-    "#999900",
-    "#009900",
-    "#003300",
-    "#009999",
-    "#000099",
-    "#0066ff",
-    "#6600ff",
-    "#cc33cc",
-    "#777799",
+    "#E69F00",  # orange
+    "#56b4e9",  # skyblue
+    "#009e74",  # bluegreen
+    "#f0e442",  # yellow
+    "#0072b2",  # blue
+    "#d55e00",  # vermillion
+    "#cc79a7",  # reddish purple
 ]
 
 DEFAULT_COLOR_SCHEME = {

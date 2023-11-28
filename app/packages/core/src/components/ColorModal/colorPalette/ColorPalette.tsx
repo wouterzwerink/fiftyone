@@ -1,3 +1,6 @@
+/*
+ This is the component that rendres the global color pool
+  */
 import * as fos from "@fiftyone/state";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
@@ -6,7 +9,11 @@ import { ChromePicker } from "react-color";
 import { selector, useRecoilValue } from "recoil";
 import styled from "styled-components";
 import Checkbox from "../../Common/Checkbox";
-import { colorBlindFriendlyPalette, isSameArray } from "../utils";
+import {
+  classicPalette,
+  colorBlindFriendlyPalette,
+  isSameArray,
+} from "../utils";
 import { colorPicker } from "./Colorpicker.module.css";
 
 interface ColorPaletteProps {
@@ -20,8 +27,8 @@ const isDefaultColorPool = selector({
     isSameArray(get(fos.colorScheme).colorPool, get(fos.config).colorPool),
 });
 
-const isColorBlindColorPool = selector({
-  key: "isColorBlindColorPool",
+const isUsingClassicColors = selector({
+  key: "isUsingClassicColors",
   get: ({ get }) =>
     isSameArray(get(fos.colorScheme).colorPool, colorBlindFriendlyPalette),
 });
@@ -36,7 +43,7 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
   const [pickerColor, setPickerColor] = useState<string | null>(null);
 
   const isUsingDefault = useRecoilValue(isDefaultColorPool);
-  const isUsingColorBlindOption = useRecoilValue(isColorBlindColorPool);
+  const isUsingClassicFOColors = useRecoilValue(isUsingClassicColors);
   const defaultPool = useRecoilValue(fos.config).colorPool;
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -139,28 +146,28 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
         )}
       </ColorPaletteContainer>
       <div style={{ width: "50%" }}>
+        {!isUsingClassicFOColors && (
+          <Checkbox
+            name={"Use classic options"}
+            value={isUsingClassicFOColors}
+            setValue={(v) =>
+              v &&
+              setColorScheme((current) => ({
+                ...current,
+                colorPool: classicPalette,
+              }))
+            }
+          />
+        )}
         {!isUsingDefault && (
           <Checkbox
-            name={"Use default"}
+            name={"Use default palette"}
             value={isUsingDefault}
             setValue={(v) =>
               v &&
               setColorScheme((current) => ({
                 ...current,
                 colorPool: defaultPool,
-              }))
-            }
-          />
-        )}
-        {!isUsingColorBlindOption && (
-          <Checkbox
-            name={"Use color blind friendly option"}
-            value={isUsingColorBlindOption}
-            setValue={(v) =>
-              v &&
-              setColorScheme((current) => ({
-                ...current,
-                colorPool: colorBlindFriendlyPalette,
               }))
             }
           />
