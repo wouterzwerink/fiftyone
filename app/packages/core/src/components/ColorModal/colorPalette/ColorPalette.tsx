@@ -29,8 +29,7 @@ const isDefaultColorPool = selector({
 
 const isUsingClassicColors = selector({
   key: "isUsingClassicColors",
-  get: ({ get }) =>
-    isSameArray(get(fos.colorScheme).colorPool, colorBlindFriendlyPalette),
+  get: ({ get }) => isSameArray(get(fos.colorScheme).colorPool, classicPalette),
 });
 
 const ColorPalette: React.FC<ColorPaletteProps> = ({
