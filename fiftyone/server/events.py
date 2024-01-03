@@ -305,7 +305,6 @@ async def _initialize_listener(payload: ListenPayload) -> InitializedListener:
                         state.view = state.dataset.load_saved_view(doc.name)
                         state.selected = []
                         state.selected_labels = []
-                        state.view_name = doc.name
                     except:
                         pass
         elif (

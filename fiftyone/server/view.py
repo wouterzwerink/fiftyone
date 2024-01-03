@@ -146,6 +146,7 @@ def get_view(
             pagination_data=pagination_data,
             extended_stages=extended_stages,
         )
+
     return view
 
 

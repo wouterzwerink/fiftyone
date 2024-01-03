@@ -329,12 +329,14 @@ class Dataset:
         info: Info = None,
         saved_view_slug: t.Optional[str] = gql.UNSET,
         view: t.Optional[BSONArray] = None,
+        extended_stages: t.Optional[BSONArray] = None,
     ) -> t.Optional["Dataset"]:
         return await serialize_dataset(
             dataset_name=name,
             serialized_view=view,
             saved_view_slug=saved_view_slug,
             dicts=False,
+            extended_stages=extended_stages,
         )
 
 
@@ -573,7 +575,13 @@ async def serialize_dataset(
     serialized_view: BSONArray,
     saved_view_slug: t.Optional[str] = None,
     dicts=True,
+    extended_stages: t.Optional[BSONArray] = None,
 ) -> Dataset:
+    if saved_view_slug and serialized_view:
+        raise ValueError(
+            "only one of 'saved_view_slug' and 'view' can be provided"
+        )
+
     def run():
         if not fod.dataset_exists(dataset_name):
             return None
@@ -585,11 +593,12 @@ async def serialize_dataset(
             doc = dataset._get_saved_view_doc(saved_view_slug, slug=True)
             view = dataset.load_saved_view(doc.name)
             view_name = view.name
-            if serialized_view:
-                for stage in serialized_view:
-                    view = view.add_stage(fosg.ViewStage._from_dict(stage))
         except:
             view = fov.DatasetView._build(dataset, serialized_view or [])
+
+        if extended_stages:
+            for stage in extended_stages:
+                view = view.add_stage(fosg.ViewStage._from_dict(stage))
 
         doc = dataset._doc.to_dict(no_dereference=True)
         Dataset.modifier(doc)

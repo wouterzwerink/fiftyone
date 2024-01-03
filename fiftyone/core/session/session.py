@@ -359,6 +359,17 @@ class Session(object):
             view = dataset
             dataset = dataset._root_dataset
 
+        if view is not None and view_name:
+            raise ValueError(
+                "Only one of 'view' and 'view_name' can be provided"
+            )
+
+        if dataset is None and view_name:
+            raise ValueError("'view_name' requires a 'dataset'")
+
+        if view_name:
+            view = dataset.load_saved_view(view_name)
+
         self._validate(dataset, view, spaces, color_scheme, plots, config)
 
         if port is None:
@@ -403,10 +414,6 @@ class Session(object):
 
         self.plots = plots
 
-        final_view_name = view_name
-        if not final_view_name and view and view.name:
-            final_view_name = view.name
-
         if spaces is None:
             spaces = default_spaces.copy()
 
@@ -414,7 +421,6 @@ class Session(object):
             config=config,
             dataset=view._root_dataset if view is not None else dataset,
             view=view,
-            view_name=final_view_name,
             spaces=spaces,
             color_scheme=build_color_scheme(color_scheme, dataset, config),
         )
@@ -712,14 +718,12 @@ class Session(object):
         if view is None:
             self._state.group_slice = None
             self._state.view = None
-            self._state.view_name = None
         else:
             if view._root_dataset != self.dataset:
                 self._set_dataset(view._root_dataset)
 
             self._state.group_slice = view.group_slice
             self._state.view = view
-            self._state.view_name = view.name
 
         self._state.selected = []
         self._state.selected_labels = []

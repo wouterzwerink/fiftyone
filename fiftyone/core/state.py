@@ -45,8 +45,6 @@ class StateDescription(etas.Serializable):
         spaces (None): a :class:`fiftyone.core.spaces.Space`
         color_scheme (None): a :class:`fiftyone.core.odm.dataset.ColorScheme`
         view (None): the current :class:`fiftyone.core.view.DatasetView`
-        view_name (None): the name of the view if the current view is a
-            saved view
     """
 
     def __init__(
@@ -58,7 +56,6 @@ class StateDescription(etas.Serializable):
         spaces=None,
         color_scheme=None,
         view=None,
-        view_name=None,
         field_visibility_stage=None,
         group_slice=None,
     ):
@@ -66,16 +63,11 @@ class StateDescription(etas.Serializable):
         self.dataset = dataset
         self.selected = selected or []
         self.selected_labels = selected_labels or []
-        if dataset is not None:
-            dataset.reload()
-        self.view = (
-            dataset.load_saved_view(view_name)
-            if dataset is not None and view_name
-            else view
-        )
+        self.view = view
         self.spaces = spaces
         self.color_scheme = color_scheme or build_color_scheme()
         self.field_visibility_stage = field_visibility_stage
+
         if group_slice is None and view is not None:
             group_slice = view.group_slice
         self.group_slice = group_slice
@@ -100,8 +92,9 @@ class StateDescription(etas.Serializable):
                     d["view_cls"] = _view_cls
 
                     d["view_name"] = self.view.name  # None for unsaved views
-                    if d.get("view_name") is not None:
-                        d["saved_view_slug"] = fou.to_slug(self.view.name)
+                    d["saved_view_slug"] = (
+                        fou.to_slug(self.view.name) if self.view.name else None
+                    )
 
                 d["sample_fields"] = [
                     asdict(field)
@@ -159,20 +152,15 @@ class StateDescription(etas.Serializable):
         stages = d.get("view", None)
         view = None
         view_name = d.get("view_name", None)
-        if dataset is not None:
-            if view_name:
-                try:
-                    view = dataset.load_saved_view(view_name)
-                except Exception as e:
-                    dataset.reload()
-                    view = dataset.load_saved_view(view_name)
+        if stages:
+            try:
+                view = fov.DatasetView._build(dataset, stages)
+            except:
+                dataset.reload()
+                view = fov.DatasetView._build(dataset, stages)
 
-            elif stages:
-                try:
-                    view = fov.DatasetView._build(dataset, stages)
-                except:
-                    dataset.reload()
-                    view = fov.DatasetView._build(dataset, stages)
+            if view_name:
+                view._set_name(view_name)
 
         config = with_config or fo.app_config.copy()
         for field, value in d.get("config", {}).items():
