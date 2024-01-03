@@ -8,11 +8,9 @@ import { RegisteredSetter } from "./registerSetter";
 
 const onSetViewName: RegisteredSetter =
   ({ environment, router, sessionRef }) =>
-  ({ get, set }, slug: string | DefaultValue | null) => {
+  ({ get, set }, newSlug: string | DefaultValue | null) => {
     set(pendingEntry, true);
-    if (slug instanceof DefaultValue) {
-      slug = null;
-    }
+    const slug = newSlug instanceof DefaultValue ? null : newSlug;
 
     const dataset = get(datasetName);
     if (!dataset) {
@@ -28,22 +26,23 @@ const onSetViewName: RegisteredSetter =
         datasetName: dataset,
         form: {},
       },
+      onCompleted: ({ setView: view }) => {
+        sessionRef.current.selectedLabels = [];
+        sessionRef.current.selectedSamples = new Set();
+        sessionRef.current.fieldVisibilityStage = undefined;
+        router.history.push(
+          resolveURL({
+            currentPathname: router.history.location.pathname,
+            currentSearch: router.history.location.search,
+            nextDataset: dataset,
+            nextView: slug || undefined,
+          }),
+          {
+            view,
+          }
+        );
+      },
     });
-
-    sessionRef.current.selectedLabels = [];
-    sessionRef.current.selectedSamples = new Set();
-    sessionRef.current.fieldVisibilityStage = undefined;
-    router.history.push(
-      resolveURL({
-        currentPathname: router.history.location.pathname,
-        currentSearch: router.history.location.search,
-        nextDataset: dataset,
-        nextView: slug || undefined,
-      }),
-      {
-        view: [],
-      }
-    );
   };
 
 export default onSetViewName;

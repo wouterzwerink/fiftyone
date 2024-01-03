@@ -577,11 +577,6 @@ async def serialize_dataset(
     dicts=True,
     extended_stages: t.Optional[BSONArray] = None,
 ) -> Dataset:
-    if saved_view_slug and serialized_view:
-        raise ValueError(
-            "only one of 'saved_view_slug' and 'view' can be provided"
-        )
-
     def run():
         if not fod.dataset_exists(dataset_name):
             return None
@@ -589,7 +584,11 @@ async def serialize_dataset(
         dataset = fod.load_dataset(dataset_name)
         dataset.reload()
         view_name = None
+
         try:
+            if saved_view_slug and serialized_view:
+                raise ValueError("pass")
+
             doc = dataset._get_saved_view_doc(saved_view_slug, slug=True)
             view = dataset.load_saved_view(doc.name)
             view_name = view.name

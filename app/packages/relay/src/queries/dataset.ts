@@ -5,7 +5,7 @@ export default graphql`
     $savedViewSlug: String
     $name: String!
     $view: BSONArray!
-    $extendedView: BSONArray!
+    $extendedStages: BSONArray
   ) {
     config {
       colorBy
@@ -15,7 +15,12 @@ export default graphql`
       showSkeletons
     }
 
-    dataset(name: $name, view: $extendedView, savedViewSlug: $savedViewSlug) {
+    dataset(
+      name: $name
+      view: $view
+      extendedStages: $extendedStages
+      savedViewSlug: $savedViewSlug
+    ) {
       name
       defaultGroupSlice
       viewName

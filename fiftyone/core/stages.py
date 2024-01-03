@@ -7465,7 +7465,6 @@ class ToPatches(ViewStage):
                 patches_dataset.name = name
 
             state["name"] = patches_dataset.name
-            print("MAKE", patches_dataset.name)
             self._state = state
         else:
             patches_dataset = fod.load_dataset(name)
