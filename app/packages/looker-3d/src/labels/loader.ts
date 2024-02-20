@@ -6,7 +6,7 @@ const RENDERABLE_LIST = ["Detections", "Polylines"];
 
 export type OverlayLabel = {
   _id: string;
-  _cls: string;
+  _type: string;
   path: string[];
   selected: boolean;
   color?: string;
@@ -32,19 +32,19 @@ export const load3dOverlayForSample = (
       continue;
     }
 
-    if (RENDERABLE.includes(label._cls)) {
+    if (RENDERABLE.includes(label._type)) {
       overlays.push({
         ...label,
         sampleId,
         path: [...currentPath, labelKey].filter((k) => !!k),
         selected: label._id in selectedLabels,
       });
-    } else if (RENDERABLE_LIST.includes(label._cls)) {
+    } else if (RENDERABLE_LIST.includes(label._type)) {
       overlays = [
         ...overlays,
         ...load3dOverlayForSample(
           sampleId,
-          label[label._cls.toLowerCase()],
+          label[label._type.toLowerCase()],
           selectedLabels,
           labelKey ? [...currentPath, labelKey] : [...currentPath]
         ),
